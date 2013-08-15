@@ -62,7 +62,7 @@ test_param(int argc, char *argv[])
 	if (param_get(p, &val) != 0)
 		errx(1, "failed to read test parameter");
 	if (val != 0x12345678)
-		errx(1, "parameter value mismatch");
+		errx(1, "parameter value mismatch (val = %X)", val);
 
 	val = 0xa5a5a5a5;
 	if (param_set(p, &val) != 0)
@@ -70,7 +70,7 @@ test_param(int argc, char *argv[])
 	if (param_get(p, &val) != 0)
 		errx(1, "failed to re-read test parameter");
 	if ((uint32_t)val != 0xa5a5a5a5)
-		errx(1, "parameter value mismatch after write");
+		errx(1, "parameter value mismatch after write (val = %X)", val);
 
 	warnx("parameter test PASS");
 

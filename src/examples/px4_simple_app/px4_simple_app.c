@@ -50,10 +50,11 @@ __EXPORT int px4_simple_app_main(int argc, char *argv[]);
 
 int px4_simple_app_main(int argc, char *argv[])
 {
-	printf("Hello Sky!\n");
+	printf("Hello Sky! ( chiacheng.tsao@gmail.com )\n");
 
 	/* subscribe to sensor_combined topic */
 	int sensor_sub_fd = orb_subscribe(ORB_ID(sensor_combined));
+    int count = 0;
 	orb_set_interval(sensor_sub_fd, 1000);
 
 	/* advertise attitude topic */
@@ -71,7 +72,7 @@ int px4_simple_app_main(int argc, char *argv[])
 
 	int error_counter = 0;
 
-	while (true) {
+	while (count < 20) {
 		/* wait for sensor update of 1 file descriptor for 1000 ms (1 second) */
 		int poll_ret = poll(fds, 1, 1000);
 	 
@@ -109,6 +110,7 @@ int px4_simple_app_main(int argc, char *argv[])
 			 * if (fds[1..n].revents & POLLIN) {}
 			 */
 		}
+        count++;
 	}
 
 	return 0;
