@@ -86,13 +86,13 @@ fi
 #
 if [ -f /fs/microsd/px4io.bin ]
 then
-	echo "PX4IO Firmware found. Checking Upgrade.."
+	echo "PX4IO (chiacheng.tsao@gmail.com) Firmware found. Checking Upgrade.." >> /fs/microsd/px4io.log
 	if cmp /fs/microsd/px4io.bin /fs/microsd/px4io.cur
 	then
 		echo "No newer version, skipping upgrade."
 	else
 		echo "Loading /fs/microsd/px4io.bin"
-		if px4io update /fs/microsd/px4io.bin > /fs/microsd/px4io.log
+		if px4io update /fs/microsd/px4io.bin >> /fs/microsd/px4io.log
 		then
 			cp /fs/microsd/px4io.bin /fs/microsd/px4io.cur
 			echo "Flashed /fs/microsd/px4io.bin OK" >> /fs/microsd/px4io.log
