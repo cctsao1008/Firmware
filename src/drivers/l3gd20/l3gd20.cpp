@@ -752,7 +752,11 @@ start()
 		errx(1, "already started");
 
 	/* create the driver */
+	#if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
 	g_dev = new L3GD20(1 /* XXX magic number */, GYRO_DEVICE_PATH, (spi_dev_e)PX4_SPIDEV_GYRO);
+	#elif defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+    g_dev = new L3GD20(1 /* XXX magic number */, GYRO_DEVICE_PATH, (spi_dev_e)TMR_SPIDEV_GYRO);
+	#endif
 
 	if (g_dev == nullptr)
 		goto fail;

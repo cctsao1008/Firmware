@@ -842,7 +842,11 @@ int
 blinkm_main(int argc, char *argv[])
 {
 
+    #if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
 	int i2cdevice = PX4_I2C_BUS_EXPANSION;
+	#elif defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+    int i2cdevice = TMR_I2C_BUS_EXPANSION;
+	#endif
 	int blinkmadr = 9;
 
 	int x;

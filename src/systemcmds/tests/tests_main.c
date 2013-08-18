@@ -90,7 +90,9 @@ const struct {
 	{"int",			test_int,	0},
 	{"float",		test_float,	0},
 	{"sensors",		test_sensors,	0},
+	#if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
 	{"gpio",		test_gpio,	OPT_NOJIGTEST | OPT_NOALLTEST},
+	#endif
 	{"hrt",			test_hrt,	OPT_NOJIGTEST | OPT_NOALLTEST},
 	{"ppm",			test_ppm,	OPT_NOJIGTEST | OPT_NOALLTEST},
 	{"servo",		test_servo,	OPT_NOJIGTEST | OPT_NOALLTEST},

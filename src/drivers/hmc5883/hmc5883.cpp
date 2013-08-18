@@ -74,8 +74,11 @@
 /*
  * HMC5883 internal constants and data structures.
  */
-
+#if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
 #define HMC5883L_ADDRESS		PX4_I2C_OBDEV_HMC5883
+#elif defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+#define HMC5883L_ADDRESS		TMR_I2C_OBDEV_HMC5883
+#endif
 
 /* Max measurement rate is 160Hz */
 #define HMC5883_CONVERSION_INTERVAL	(1000000 / 160)	/* microseconds */
@@ -1225,13 +1228,17 @@ start()
 		errx(0, "already started");
 
 	/* create the driver, attempt expansion bus first */
+	#if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
 	g_dev = new HMC5883(PX4_I2C_BUS_EXPANSION);
+	#elif defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+	g_dev = new HMC5883(TMR_I2C_BUS_EXPANSION);
+	#endif
 	if (g_dev != nullptr && OK != g_dev->init()) {
 		delete g_dev;
 		g_dev = nullptr;
 	}
 			
-
+#if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
 #ifdef PX4_I2C_BUS_ONBOARD
 	/* if this failed, attempt onboard sensor */
 	if (g_dev == nullptr) {
@@ -1241,6 +1248,18 @@ start()
 		}
 	}
 #endif
+#elif defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+#ifdef TMR_I2C_BUS_ONBOARD
+	/* if this failed, attempt onboard sensor */
+	if (g_dev == nullptr) {
+		g_dev = new HMC5883(TMR_I2C_BUS_ONBOARD);
+		if (g_dev != nullptr && OK != g_dev->init()) {
+			goto fail;
+		}
+	}
+#endif
+#endif
+
 
 	if (g_dev == nullptr)
 		goto fail;

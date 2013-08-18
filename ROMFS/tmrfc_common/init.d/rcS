@@ -1,0 +1,80 @@
+#!nsh
+#
+# TMRFC startup script.
+
+#
+# Default to auto-start mode.  An init script on the microSD card
+# can change this to prevent automatic startup of the flight script.
+#
+set MODE autostart
+
+#
+# Try to mount the microSD card.
+#
+echo "[init] looking for microSD..."
+if mount -t vfat /dev/mmcsd0 /fs/microsd
+then
+	echo "[init] card mounted at /fs/microsd"
+	# Start playing the startup tune
+	tone_alarm start
+else
+	echo "[init] no microSD card found"
+	# Play SOS
+	tone_alarm 2
+fi
+
+#
+# Look for an init script on the microSD card.
+#
+# To prevent automatic startup in the current flight mode,
+# the script should set MODE to some other value.
+#
+if [ -f /fs/microsd/etc/rc ]
+then
+	echo "[init] reading /fs/microsd/etc/rc"
+	sh /fs/microsd/etc/rc
+fi
+# Also consider rc.txt files
+if [ -f /fs/microsd/etc/rc.txt ]
+then
+	echo "[init] reading /fs/microsd/etc/rc.txt"
+	sh /fs/microsd/etc/rc.txt
+fi
+
+if [ $MODE == autostart ]
+then
+
+#
+# Start the ORB (first app to start)
+#
+uorb start
+
+#
+# Load microSD params
+#
+if ramtron start
+then
+	param select /ramtron/params
+	if [ -f /ramtron/params ]
+	then
+		param load /ramtron/params
+	fi
+else
+	param select /fs/microsd/params
+	if [ -f /fs/microsd/params ]
+	then
+		param load /fs/microsd/params
+	fi
+fi
+
+#
+# Check if auto-setup from one of the standard scripts is wanted
+# SYS_AUTOSTART = 0 means no autostart (default)
+#
+if param compare SYS_AUTOSTART 1
+then
+	sh /etc/init.d/01_fmu_quad_x
+fi
+
+# End of autostart
+fi

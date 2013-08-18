@@ -57,11 +57,18 @@
 #include "systemlib/systemlib.h"
 #include "systemlib/err.h"
 
+#if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
 #ifndef PX4_I2C_BUS_ONBOARD
 #  error PX4_I2C_BUS_ONBOARD not defined, no device interface
 #endif
+
 #ifndef PX4_I2C_OBDEV_PX4IO
 #  error PX4_I2C_OBDEV_PX4IO not defined
+#endif
+#elif defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+#ifndef TMR_I2C_BUS_ONBOARD
+#  error TMR_I2C_BUS_ONBOARD not defined, no device interface
+#endif
 #endif
 
 __EXPORT int i2c_main(int argc, char *argv[]);
@@ -73,23 +80,31 @@ static struct i2c_dev_s *i2c;
 int i2c_main(int argc, char *argv[])
 {
 	/* find the right I2C */
-	i2c = up_i2cinitialize(PX4_I2C_BUS_ONBOARD);
+    uint32_t val;
+    uint8_t buf[] = { 0, 4};
 
-	if (i2c == NULL)
+    #if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
+    i2c = up_i2cinitialize(PX4_I2C_BUS_ONBOARD);
+
+    if (i2c == NULL)
 		errx(1, "failed to locate I2C bus");
 
 	usleep(100000);
 
-	uint8_t buf[] = { 0, 4};
 	int ret = transfer(PX4_I2C_OBDEV_PX4IO, buf, sizeof(buf), NULL, 0);
 
 	if (ret)
 		errx(1, "send failed - %d", ret);
 
-	uint32_t val;
 	ret = transfer(PX4_I2C_OBDEV_PX4IO, NULL, 0, (uint8_t *)&val, sizeof(val));
 	if (ret)
 		errx(1, "recive failed - %d", ret);
+    
+    #elif defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+    i2c = up_i2cinitialize(TMR_I2C_BUS_ONBOARD);
+    if (i2c == NULL)
+		errx(1, "failed to locate I2C bus");
+    #endif
 
 	errx(0, "got 0x%08x", val);
 }

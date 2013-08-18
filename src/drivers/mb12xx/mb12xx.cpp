@@ -71,7 +71,12 @@
 #include <uORB/topics/subsystem_info.h>
 
 /* Configuration Constants */
+#if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
 #define MB12XX_BUS 			PX4_I2C_BUS_EXPANSION
+#elif defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+#define MB12XX_BUS 			TMR_I2C_BUS_EXPANSION
+#endif
+
 #define MB12XX_BASEADDR 	0x70 /* 7-bit address. 8-bit address is 0xE0 */
 
 /* MB12xx Registers addresses */

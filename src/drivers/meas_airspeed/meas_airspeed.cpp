@@ -465,7 +465,7 @@ meas_airspeed_usage()
 {
 	warnx("usage: meas_airspeed command [options]");
 	warnx("options:");
-	warnx("\t-b --bus i2cbus (%d)", PX4_I2C_BUS_DEFAULT);
+	warnx("\t-b --bus i2cbus (%d)", BOARD_I2C_BUS_DEFAULT);
 	warnx("command:");
 	warnx("\tstart|stop|reset|test|info");
 }
@@ -473,7 +473,7 @@ meas_airspeed_usage()
 int
 meas_airspeed_main(int argc, char *argv[])
 {
-	int i2c_bus = PX4_I2C_BUS_DEFAULT;
+	int i2c_bus = BOARD_I2C_BUS_DEFAULT;
 
 	int i;
 

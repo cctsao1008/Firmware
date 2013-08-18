@@ -243,14 +243,20 @@ private:
 #define MS5611_CONVERSION_INTERVAL	10000	/* microseconds */
 #define MS5611_MEASUREMENT_RATIO	3	/* pressure measurements per temperature measurement */
 
-#define MS5611_BUS			PX4_I2C_BUS_ONBOARD
+#if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
+#define MS5611_BUS		    	PX4_I2C_BUS_ONBOARD
 #define MS5611_ADDRESS_1		PX4_I2C_OBDEV_MS5611 /* address select pins pulled high (PX4FMU series v1.6+) */
 #define MS5611_ADDRESS_2		0x77    /* address select pins pulled low (PX4FMU prototypes) */
+#elif defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+#define MS5611_BUS			    TMR_I2C_BUS_ONBOARD
+#define MS5611_ADDRESS_1		TMR_I2C_OBDEV_MS5611 /* address select pins pulled high (PX4FMU series v1.6+) */
+#define MS5611_ADDRESS_2		0x77    /* address select pins pulled low (PX4FMU prototypes) */
+#endif
 
 #define ADDR_RESET_CMD			0x1E	/* write to this address to reset chip */
 #define ADDR_CMD_CONVERT_D1		0x48	/* write to this address to start temperature conversion */
 #define ADDR_CMD_CONVERT_D2		0x58	/* write to this address to start pressure conversion */
-#define ADDR_DATA			0x00	/* address of 3 bytes / 32bit pressure data */
+#define ADDR_DATA               0x00	/* address of 3 bytes / 32bit pressure data */
 #define ADDR_PROM_SETUP			0xA0	/* address of 8x 2 bytes factory and calibration data */
 #define ADDR_PROM_C1			0xA2	/* address of 6x 2 bytes calibration data */
 

@@ -6,10 +6,9 @@ MODULE_COMMAND		 = tests
 MODULE_STACKSIZE	 = 12000
 MAXOPTIMIZATION		 = -Os
 
-SRCS			 = test_adc.c \
+SRCS		   = test_adc.c \
 			   test_bson.c \
 			   test_float.c \
-			   test_gpio.c \
 			   test_hott_telemetry.c \
 			   test_hrt.c \
 			   test_int.c \
@@ -26,3 +25,7 @@ SRCS			 = test_adc.c \
 			   tests_file.c \
 			   tests_main.c \
 			   tests_param.c
+
+ifeq ($(CONFIG_BOARD),PX4FMU_V1)
+SRCS		   += test_gpio.c
+endif

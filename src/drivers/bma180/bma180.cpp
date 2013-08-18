@@ -785,7 +785,11 @@ start()
 		errx(1, "already started");
 
 	/* create the driver */
+	#if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
 	g_dev = new BMA180(1 /* XXX magic number */, (spi_dev_e)PX4_SPIDEV_ACCEL);
+	#elif defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+    g_dev = new BMA180(1 /* XXX magic number */, (spi_dev_e)TMR_SPIDEV_ACCEL);
+	#endif
 
 	if (g_dev == nullptr)
 		goto fail;
