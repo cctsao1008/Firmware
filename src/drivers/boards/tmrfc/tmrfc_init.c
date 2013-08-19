@@ -293,7 +293,7 @@ __EXPORT int nsh_archinitialize(void)
 
     /* Initializing SPI port 3 */
 
-	message("[boot] Initializing SPI port 3\n");
+	message("[boot] Initializing SPI3\n");
 	spi3 = up_spiinitialize(3);
 
 	if (!spi3) {
