@@ -269,7 +269,6 @@ __EXPORT int nsh_archinitialize(void)
 	message("[boot] Successfully bound SPI port 3 to the MMCSD driver\n");
     #endif
     /* Mount the SDIO-based MMC/SD block driver first and get an instance of the SDIO interface */
-
     message("[boot] Initializing SDIO slot %d\n", CONFIG_NSH_MMCSDSLOTNO);
     sdio = sdio_initialize(CONFIG_NSH_MMCSDSLOTNO);
 
@@ -292,7 +291,6 @@ __EXPORT int nsh_archinitialize(void)
     sdio_mediachange(sdio, true);
 
     /* Initializing SPI port 3 */
-
 	message("[boot] Initializing SPI3\n");
 	spi3 = up_spiinitialize(3);
 
