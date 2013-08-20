@@ -54,7 +54,7 @@
 #include <drivers/drv_hrt.h>
 #include <drivers/drv_tone_alarm.h>
 
-#include <nuttx/spi.h>
+#include <nuttx/spi/spi.h>
 
 #include "tests.h"
 

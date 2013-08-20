@@ -52,7 +52,7 @@
 
 #include <arch/board/board.h>
 
-#include <nuttx/spi.h>
+#include <nuttx/spi/spi.h>
 
 #include "tests.h"
 
