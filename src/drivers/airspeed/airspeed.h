@@ -74,10 +74,10 @@
 #include <uORB/topics/subsystem_info.h>
 
 /* Default I2C bus */
-#if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
-#define BOARD_I2C_BUS_DEFAULT		PX4_I2C_BUS_EXPANSION
-#elif defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+#if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
 #define BOARD_I2C_BUS_DEFAULT		TMR_I2C_BUS_EXPANSION
+#else
+#define BOARD_I2C_BUS_DEFAULT		PX4_I2C_BUS_EXPANSION
 #endif
 
 /* Oddly, ERROR is not defined for C++ */

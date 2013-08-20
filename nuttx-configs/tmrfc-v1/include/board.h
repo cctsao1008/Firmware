@@ -235,11 +235,11 @@
  */
 
 #ifdef CONFIG_SDIO_DMA
-#  define SDIO_MMCXFR_CLKDIV    (1 << SDIO_CLKCR_CLKDIV_SHIFT)
-#  define SDIO_SDXFR_CLKDIV    (1 << SDIO_CLKCR_CLKDIV_SHIFT) 
+#  define SDIO_MMCXFR_CLKDIV    (4 << SDIO_CLKCR_CLKDIV_SHIFT)
+#  define SDIO_SDXFR_CLKDIV    (4 << SDIO_CLKCR_CLKDIV_SHIFT) 
 #else
-#  define SDIO_MMCXFR_CLKDIV    (2 << SDIO_CLKCR_CLKDIV_SHIFT)
-#  define SDIO_SDXFR_CLKDIV    (2 << SDIO_CLKCR_CLKDIV_SHIFT)
+#  define SDIO_MMCXFR_CLKDIV    (4 << SDIO_CLKCR_CLKDIV_SHIFT)
+#  define SDIO_SDXFR_CLKDIV    (4 << SDIO_CLKCR_CLKDIV_SHIFT)
 #endif
 
 /* Alternate function pin selections ************************************************/

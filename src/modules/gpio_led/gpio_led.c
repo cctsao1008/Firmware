@@ -181,14 +181,14 @@ void gpio_led_start(FAR void *arg)
 
 	char *gpio_dev;
 
-    #if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
+    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+        gpio_dev = TMRFC_DEVICE_PATH;
+    #else
 	if (priv->use_io) {
 		gpio_dev = PX4IO_DEVICE_PATH;
 	} else {
 		gpio_dev = PX4FMU_DEVICE_PATH;
 	}
-    #elif defined(CONFIG_ARCH_BOARD_TMRFC_V1)
-        gpio_dev = TMRFC_DEVICE_PATH;
     #endif
 
 	/* open GPIO device */

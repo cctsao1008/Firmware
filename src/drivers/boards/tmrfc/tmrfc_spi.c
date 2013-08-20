@@ -73,8 +73,8 @@ __EXPORT void weak_function stm32_spiinitialize(void)
 	stm32_configgpio(GPIO_SPI_CS_GYRO);
 	stm32_configgpio(GPIO_SPI_CS_ACCEL);
 	stm32_configgpio(GPIO_SPI_CS_MPU);
-    #endif
 	stm32_configgpio(GPIO_SPI_CS_SDCARD);
+    #endif
 
 	/* De-activate all peripherals,
 	 * required for some peripheral
@@ -84,8 +84,8 @@ __EXPORT void weak_function stm32_spiinitialize(void)
 	stm32_gpiowrite(GPIO_SPI_CS_GYRO, 1);
 	stm32_gpiowrite(GPIO_SPI_CS_ACCEL, 1);
 	stm32_gpiowrite(GPIO_SPI_CS_MPU, 1);
-    #endif
 	stm32_gpiowrite(GPIO_SPI_CS_SDCARD, 1);
+    #endif
 }
 
 __EXPORT void stm32_spi1select(FAR struct spi_dev_s *dev, enum spi_dev_e devid, bool selected)
@@ -148,7 +148,9 @@ __EXPORT uint8_t stm32_spi2status(FAR struct spi_dev_s *dev, enum spi_dev_e devi
 __EXPORT void stm32_spi3select(FAR struct spi_dev_s *dev, enum spi_dev_e devid, bool selected)
 {
 	/* there can only be one device on this bus, so always select it */
+    #if 0
 	stm32_gpiowrite(GPIO_SPI_CS_SDCARD, !selected);
+    #endif
 }
 
 __EXPORT uint8_t stm32_spi3status(FAR struct spi_dev_s *dev, enum spi_dev_e devid)

@@ -42,7 +42,13 @@
 
 #include <sys/ioctl.h>
 
-#if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
+#if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+/*
+ * TMRFC GPIO numbers.
+ */
+
+# define TMRFC_DEVICE_PATH	"/dev/tmrfc"
+#else
 /*
  * PX4FMU GPIO numbers.
  *
@@ -69,28 +75,7 @@
 #ifndef PX4IO_DEVICE_PATH
 #  error No GPIO support for this board.
 #endif
-#elif defined(CONFIG_ARCH_BOARD_TMRFC_V1)
-/*
- * TMRFC GPIO numbers.
- *
- * For shared pins, alternate function 1 selects the non-GPIO mode 
- * (USART2, CAN2, etc.)
- */
-# define GPIO_EXT_1		(1<<0)		/**< high-power GPIO 1 */
-# define GPIO_EXT_2		(1<<1)		/**< high-power GPIO 1 */
-# define GPIO_MULTI_1		(1<<2)		/**< USART2 CTS */
-# define GPIO_MULTI_2		(1<<3)		/**< USART2 RTS */
-# define GPIO_MULTI_3		(1<<4)		/**< USART2 TX */
-# define GPIO_MULTI_4		(1<<5)		/**< USART2 RX */
-# define GPIO_CAN_TX		(1<<6)		/**< CAN2 TX */
-# define GPIO_CAN_RX		(1<<7)		/**< CAN2 RX */
 
-/**
- * Default GPIO device - other devices may also support this protocol if
- * they also export GPIO-like things.  This is always the GPIOs on the
- * main board.
- */
-# define TMRFC_DEVICE_PATH	"/dev/tmrfc"
 #endif
 
 /*

@@ -146,6 +146,7 @@ private:
 };
 
 const TMRFC::GPIOConfig TMRFC::_gpio_tab[] = {
+	#if 0
 	{GPIO_GPIO0_INPUT, GPIO_GPIO0_OUTPUT, 0},
 	{GPIO_GPIO1_INPUT, GPIO_GPIO1_OUTPUT, 0},
 	{GPIO_GPIO2_INPUT, GPIO_GPIO2_OUTPUT, GPIO_USART2_CTS_1},
@@ -154,6 +155,7 @@ const TMRFC::GPIOConfig TMRFC::_gpio_tab[] = {
 	{GPIO_GPIO5_INPUT, GPIO_GPIO5_OUTPUT, GPIO_USART2_RX_1},
 	{GPIO_GPIO6_INPUT, GPIO_GPIO6_OUTPUT, GPIO_CAN2_TX_2},
 	{GPIO_GPIO7_INPUT, GPIO_GPIO7_OUTPUT, GPIO_CAN2_RX_2},
+	#endif
 };
 
 const unsigned TMRFC::_ngpio = sizeof(TMRFC::_gpio_tab) / sizeof(TMRFC::_gpio_tab[0]);
@@ -769,8 +771,10 @@ TMRFC::gpio_reset(void)
 	for (unsigned i = 0; i < _ngpio; i++)
 		stm32_configgpio(_gpio_tab[i].input);
 
+    #if 0
 	stm32_gpiowrite(GPIO_GPIO_DIR, 0);
 	stm32_configgpio(GPIO_GPIO_DIR);
+	#endif
 }
 
 void
@@ -785,7 +789,11 @@ TMRFC::gpio_set_function(uint32_t gpios, int function)
 
 		/* flip the buffer to output mode if required */
 		if (GPIO_SET_OUTPUT == function)
+			#if 0
 			stm32_gpiowrite(GPIO_GPIO_DIR, 1);
+			#else
+			;
+			#endif
 	}
 
 	/* configure selected GPIOs as required */
@@ -811,7 +819,11 @@ TMRFC::gpio_set_function(uint32_t gpios, int function)
 
 	/* flip buffer to input mode if required */
 	if ((GPIO_SET_INPUT == function) && (gpios & 3))
+		#if 0
 		stm32_gpiowrite(GPIO_GPIO_DIR, 0);
+		#else
+		;
+		#endif
 }
 
 void
@@ -913,8 +925,10 @@ fc_new_mode(PortMode new_mode)
 		break;
 
 	case PORT_FULL_SERIAL:
+		#if 0
 		/* set all multi-GPIOs to serial mode */
 		gpio_bits = GPIO_MULTI_1 | GPIO_MULTI_2 | GPIO_MULTI_3 | GPIO_MULTI_4;
+		#endif
 		break;
 
 	case PORT_FULL_PWM:
@@ -923,15 +937,19 @@ fc_new_mode(PortMode new_mode)
 		break;
 
 	case PORT_GPIO_AND_SERIAL:
+		#if 0
 		/* set RX/TX multi-GPIOs to serial mode */
 		gpio_bits = GPIO_MULTI_3 | GPIO_MULTI_4;
+		#endif
 		break;
 
 	case PORT_PWM_AND_SERIAL:
 		/* select 2-pin PWM mode */
 		servo_mode = TMRFC::MODE_2PWM;
+		#if 0
 		/* set RX/TX multi-GPIOs to serial mode */
 		gpio_bits = GPIO_MULTI_3 | GPIO_MULTI_4;
+		#endif
 		break;
 
 	case PORT_PWM_AND_GPIO:
@@ -941,9 +959,10 @@ fc_new_mode(PortMode new_mode)
 	}
 
 	/* adjust GPIO config for serial mode(s) */
+	#if 0
 	if (gpio_bits != 0)
 		g_fc->ioctl(0, GPIO_SET_ALT_1, gpio_bits);
-
+    #endif
 	/* (re)set the PWM output mode */
 	g_fc->set_mode(servo_mode);
 

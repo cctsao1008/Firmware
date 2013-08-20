@@ -74,10 +74,11 @@
 /*
  * HMC5883 internal constants and data structures.
  */
-#if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
-#define HMC5883L_ADDRESS		PX4_I2C_OBDEV_HMC5883
-#elif defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+ 
+#if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
 #define HMC5883L_ADDRESS		TMR_I2C_OBDEV_HMC5883
+#else
+#define HMC5883L_ADDRESS		PX4_I2C_OBDEV_HMC5883
 #endif
 
 /* Max measurement rate is 160Hz */

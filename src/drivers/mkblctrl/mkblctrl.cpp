@@ -192,6 +192,9 @@ private:
 };
 
 const MK::GPIOConfig MK::_gpio_tab[] = {
+	#if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+
+	#else
 	{GPIO_GPIO0_INPUT, GPIO_GPIO0_OUTPUT, 0},
 	{GPIO_GPIO1_INPUT, GPIO_GPIO1_OUTPUT, 0},
 	{GPIO_GPIO2_INPUT, GPIO_GPIO2_OUTPUT, GPIO_USART2_CTS_1},
@@ -200,6 +203,7 @@ const MK::GPIOConfig MK::_gpio_tab[] = {
 	{GPIO_GPIO5_INPUT, GPIO_GPIO5_OUTPUT, GPIO_USART2_RX_1},
 	{GPIO_GPIO6_INPUT, GPIO_GPIO6_OUTPUT, GPIO_CAN2_TX_2},
 	{GPIO_GPIO7_INPUT, GPIO_GPIO7_OUTPUT, GPIO_CAN2_RX_2},
+	#endif
 };
 
 const unsigned MK::_ngpio = sizeof(MK::_gpio_tab) / sizeof(MK::_gpio_tab[0]);

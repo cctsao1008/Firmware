@@ -57,17 +57,16 @@
 #include "systemlib/systemlib.h"
 #include "systemlib/err.h"
 
-#if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
+#if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+#ifndef TMR_I2C_BUS_ONBOARD
+#  error TMR_I2C_BUS_ONBOARD not defined, no device interface
+#endif
+#else
 #ifndef PX4_I2C_BUS_ONBOARD
 #  error PX4_I2C_BUS_ONBOARD not defined, no device interface
 #endif
-
 #ifndef PX4_I2C_OBDEV_PX4IO
 #  error PX4_I2C_OBDEV_PX4IO not defined
-#endif
-#elif defined(CONFIG_ARCH_BOARD_TMRFC_V1)
-#ifndef TMR_I2C_BUS_ONBOARD
-#  error TMR_I2C_BUS_ONBOARD not defined, no device interface
 #endif
 #endif
 

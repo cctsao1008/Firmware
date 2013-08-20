@@ -58,6 +58,7 @@ __BEGIN_DECLS
  ****************************************************************************************************/
 /* Configuration ************************************************************************************/
 
+#if 0
 //#ifdef CONFIG_STM32_SPI2
 //#  error "SPI2 is not supported on this board"
 //#endif
@@ -66,7 +67,12 @@ __BEGIN_DECLS
 #  warning "CAN1 is not supported on this board"
 #endif
 
+#endif
+
 /* TMRFC GPIOs ***********************************************************************************/
+
+#if 0
+
 /* LEDs */
 
 #define GPIO_LED1		(GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_50MHz|GPIO_OUTPUT_CLEAR|GPIO_PORTB|GPIO_PIN15)
@@ -107,12 +113,6 @@ __BEGIN_DECLS
 #define GPIO_GPIO7_OUTPUT	(GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_CLEAR|GPIO_PORTB|GPIO_PIN12)
 #define GPIO_GPIO_DIR		(GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_CLEAR|GPIO_PORTC|GPIO_PIN13)
 
-/* USB OTG FS
- *
- * PA9  OTG_FS_VBUS VBUS sensing (also connected to the green LED)
- */
-#define GPIO_OTGFS_VBUS (GPIO_INPUT|GPIO_FLOAT|GPIO_SPEED_100MHz|GPIO_OPENDRAIN|GPIO_PORTA|GPIO_PIN9)
-
 /* PWM
  *
  * The TMRFC has five PWM outputs, of which only the output on
@@ -132,6 +132,15 @@ __BEGIN_DECLS
 #    define BUZZER_PWMTIMER 8
 #  endif
 #endif
+
+#endif
+
+/* USB OTG FS
+ *
+ * PA9  OTG_FS_VBUS VBUS sensing (also connected to the green LED)
+ */
+#define GPIO_OTGFS_VBUS (GPIO_INPUT|GPIO_FLOAT|GPIO_SPEED_100MHz|GPIO_OPENDRAIN|GPIO_PORTA|GPIO_PIN9)
+
 
 /****************************************************************************************************
  * Public Types

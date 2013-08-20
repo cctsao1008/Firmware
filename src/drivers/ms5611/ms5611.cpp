@@ -243,13 +243,13 @@ private:
 #define MS5611_CONVERSION_INTERVAL	10000	/* microseconds */
 #define MS5611_MEASUREMENT_RATIO	3	/* pressure measurements per temperature measurement */
 
-#if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
+#if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+#define MS5611_BUS			    TMR_I2C_BUS_ONBOARD
+#define MS5611_ADDRESS_1		TMR_I2C_OBDEV_MS5611 /* address select pins pulled high */
+#define MS5611_ADDRESS_2		0x77    /* address select pins pulled low */
+#else
 #define MS5611_BUS		    	PX4_I2C_BUS_ONBOARD
 #define MS5611_ADDRESS_1		PX4_I2C_OBDEV_MS5611 /* address select pins pulled high (PX4FMU series v1.6+) */
-#define MS5611_ADDRESS_2		0x77    /* address select pins pulled low (PX4FMU prototypes) */
-#elif defined(CONFIG_ARCH_BOARD_TMRFC_V1)
-#define MS5611_BUS			    TMR_I2C_BUS_ONBOARD
-#define MS5611_ADDRESS_1		TMR_I2C_OBDEV_MS5611 /* address select pins pulled high (PX4FMU series v1.6+) */
 #define MS5611_ADDRESS_2		0x77    /* address select pins pulled low (PX4FMU prototypes) */
 #endif
 
