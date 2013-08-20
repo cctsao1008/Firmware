@@ -109,7 +109,7 @@ int ar_multiplexing_init()
 {
 	int		fd;
 
-    #elif defined(TMRFC_DEVICE_PATH)
+    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
     fd = open(TMRFC_DEVICE_PATH, 0);
     #else
 	fd = open(PX4FMU_DEVICE_PATH, 0);
