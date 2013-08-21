@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2012, 2013 TMR Development Team. All rights reserved.
+ *   Copyright (C) 2012 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -12,7 +12,7 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- * 3. Neither the name TMR nor the names of its contributors may be
+ * 3. Neither the name PX4 nor the names of its contributors may be
  *    used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
@@ -32,7 +32,7 @@
  ****************************************************************************/
 
 /**
- * @file tmrfc_can.c
+ * @file can.c
  *
  * Board-specific CAN functions.
  */
@@ -54,7 +54,7 @@
 
 #include "stm32.h"
 #include "stm32_can.h"
-#include "tmrfc_internal.h"
+#include "internal.h"
 
 #ifdef CONFIG_CAN
 
@@ -108,37 +108,37 @@
 
 int can_devinit(void)
 {
-	static bool initialized = false;
-	struct can_dev_s *can;
-	int ret;
+    static bool initialized = false;
+    struct can_dev_s *can;
+    int ret;
 
-	/* Check if we have already initialized */
+    /* Check if we have already initialized */
 
-	if (!initialized) {
-		/* Call stm32_caninitialize() to get an instance of the CAN interface */
+    if (!initialized) {
+        /* Call stm32_caninitialize() to get an instance of the CAN interface */
 
-		can = stm32_caninitialize(CAN_PORT);
+        can = stm32_caninitialize(CAN_PORT);
 
-		if (can == NULL) {
-			candbg("ERROR:  Failed to get CAN interface\n");
-			return -ENODEV;
-		}
+        if (can == NULL) {
+            candbg("ERROR:  Failed to get CAN interface\n");
+            return -ENODEV;
+        }
 
-		/* Register the CAN driver at "/dev/can0" */
+        /* Register the CAN driver at "/dev/can0" */
 
-		ret = can_register("/dev/can0", can);
+        ret = can_register("/dev/can0", can);
 
-		if (ret < 0) {
-			candbg("ERROR: can_register failed: %d\n", ret);
-			return ret;
-		}
+        if (ret < 0) {
+            candbg("ERROR: can_register failed: %d\n", ret);
+            return ret;
+        }
 
-		/* Now we are initialized */
+        /* Now we are initialized */
 
-		initialized = true;
-	}
+        initialized = true;
+    }
 
-	return OK;
+    return OK;
 }
 
 #endif

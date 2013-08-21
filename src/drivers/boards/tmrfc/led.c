@@ -31,57 +31,82 @@
  *
  ****************************************************************************/
 
-/*
- * @file tmrfc_pwm_servo.c
+/**
+ * @file tmrfc_led.c
  *
- * Configuration data for the stm32 pwm_servo driver.
- *
- * Note that these arrays must always be fully-sized.
+ * TMRFC LED backend.
  */
 
-#include <stdint.h>
+#include <nuttx/config.h>
 
-#include <drivers/stm32/drv_pwm_servo.h>
+#include <stdbool.h>
+
+#include "stm32.h"
+#include "internal.h"
 
 #include <arch/board/board.h>
-#include <drivers/drv_pwm_output.h>
 
-#include <stm32.h>
-#include <stm32_gpio.h>
-#include <stm32_tim.h>
+/*
+ * Ideally we'd be able to get these from up_internal.h,
+ * but since we want to be able to disable the NuttX use
+ * of leds for system indication at will and there is no
+ * separate switch, we need to build independent of the
+ * CONFIG_ARCH_LEDS configuration switch.
+ */
+__BEGIN_DECLS
+extern void led_init();
+extern void led_on(int led);
+extern void led_off(int led);
+__END_DECLS
 
-__EXPORT const struct pwm_servo_timer pwm_timers[PWM_SERVO_MAX_TIMERS] = {
-	{
-		.base = STM32_TIM2_BASE,
-		.clock_register = STM32_RCC_APB1ENR,
-		.clock_bit = RCC_APB1ENR_TIM2EN,
-		.clock_freq = STM32_APB1_TIM2_CLKIN
-	}
-};
+__EXPORT void led_init()
+{
+    /* Configure LED1-4 for output */
+	
+}
 
-__EXPORT const struct pwm_servo_channel pwm_channels[PWM_SERVO_MAX_CHANNELS] = {
-	{
-		.gpio = GPIO_TIM2_CH1OUT,
-		.timer_index = 0,
-		.timer_channel = 1,
-		.default_value = 1000,
-	},
-	{
-		.gpio = GPIO_TIM2_CH2OUT,
-		.timer_index = 0,
-		.timer_channel = 2,
-		.default_value = 1000,
-	},
-	{
-		.gpio = GPIO_TIM2_CH3OUT,
-		.timer_index = 0,
-		.timer_channel = 3,
-		.default_value = 1000,
-	},
-	{
-		.gpio = GPIO_TIM2_CH4OUT,
-		.timer_index = 0,
-		.timer_channel = 4,
-		.default_value = 1000,
-	}
-};
+__EXPORT void led_on(int led)
+{
+    if (led == 0)
+    {
+
+    }
+    
+    if (led == 1)
+    {
+
+    }
+    
+    if (led == 2)
+    {
+
+    }
+    
+    if (led == 3)
+    {
+
+    }
+}
+
+__EXPORT void led_off(int led)
+{
+    if (led == 0)
+    {
+    
+    }
+    
+    if (led == 1)
+    {
+    
+    }
+    
+    if (led == 2)
+    {
+    
+    }
+    
+    if (led == 3)
+    {
+    
+    }
+}

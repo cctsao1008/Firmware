@@ -32,7 +32,7 @@
  ****************************************************************************/
 
 /**
- * @file px4fmu_usb.c
+ * @file usb.c
  *
  * Board-specific USB functions.
  */
@@ -53,7 +53,7 @@
 
 #include "up_arch.h"
 #include "stm32.h"
-#include "px4fmu_internal.h"
+#include "internal.h"
 
 /************************************************************************************
  * Definitions
@@ -77,16 +77,16 @@
 
 __EXPORT void stm32_usbinitialize(void)
 {
-	/* The OTG FS has an internal soft pull-up */
+    /* The OTG FS has an internal soft pull-up */
 
-	/* Configure the OTG FS VBUS sensing GPIO, Power On, and Overcurrent GPIOs */
+    /* Configure the OTG FS VBUS sensing GPIO, Power On, and Overcurrent GPIOs */
 
 #ifdef CONFIG_STM32_OTGFS
-	stm32_configgpio(GPIO_OTGFS_VBUS);
-	/* XXX We only support device mode
-	stm32_configgpio(GPIO_OTGFS_PWRON);
-	stm32_configgpio(GPIO_OTGFS_OVER);
-	*/
+    stm32_configgpio(GPIO_OTGFS_VBUS);
+    /* XXX We only support device mode
+    stm32_configgpio(GPIO_OTGFS_PWRON);
+    stm32_configgpio(GPIO_OTGFS_OVER);
+    */
 #endif
 }
 
@@ -103,6 +103,6 @@ __EXPORT void stm32_usbinitialize(void)
 
 __EXPORT void stm32_usbsuspend(FAR struct usbdev_s *dev, bool resume)
 {
-	ulldbg("resume: %d\n", resume);
+    ulldbg("resume: %d\n", resume);
 }
 
