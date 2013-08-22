@@ -1,9 +1,9 @@
-Rudder/elevator/throttle mixer for PX4FMU
+Rudder/elevator/throttle mixer for TMRFC
 =========================================
 
 This file defines mixers suitable for controlling a fixed wing aircraft with
-rudder, elevator and throttle controls using PX4FMU. The configuration assumes
-the rudder servo is connected to PX4FMU servo output 0, the elevator to output 1
+rudder, elevator and throttle controls using TMRFC. The configuration assumes
+the rudder servo is connected to TMRFC servo output 0, the elevator to output 1
 and the throttle to output 3.
 
 Inputs to the mixer come from channel group 0 (vehicle attitude), channels 0

@@ -1,5 +1,5 @@
 /************************************************************************************
- * configs/stm32f4discovery/include/board.h
+ * nuttx-configs/px4fmu-v1/include/board.h
  * include/arch/board/board.h
  *
  *   Copyright (C) 2012 Gregory Nutt. All rights reserved.
@@ -158,8 +158,8 @@
 
 /* High-resolution timer
  */
-#define HRT_TIMER		1	/* use timer1 for the HRT */
-#define HRT_TIMER_CHANNEL	1	/* use capture/compare channel */
+#define HRT_TIMER       1   /* use timer1 for the HRT */
+#define HRT_TIMER_CHANNEL   1   /* use capture/compare channel */
 
 /* LED definitions ******************************************************************/
 /* If CONFIG_ARCH_LEDS is not defined, then the user can control the LEDs in any
@@ -200,16 +200,16 @@
  *
  * Note that UART5 has no optional pinout, so it is not listed here.
  */
-#define GPIO_USART1_RX	GPIO_USART1_RX_2
-#define GPIO_USART1_TX	GPIO_USART1_TX_2
+#define GPIO_USART1_RX  GPIO_USART1_RX_2
+#define GPIO_USART1_TX  GPIO_USART1_TX_2
 
-#define GPIO_USART2_RX	GPIO_USART2_RX_1
-#define GPIO_USART2_TX	GPIO_USART2_TX_1
-#define GPIO_USART2_RTS	GPIO_USART2_RTS_1
-#define GPIO_USART2_CTS	GPIO_USART2_CTS_1
+#define GPIO_USART2_RX  GPIO_USART2_RX_1
+#define GPIO_USART2_TX  GPIO_USART2_TX_1
+#define GPIO_USART2_RTS GPIO_USART2_RTS_1
+#define GPIO_USART2_CTS GPIO_USART2_CTS_1
 
-#define GPIO_USART6_RX	GPIO_USART6_RX_1
-#define GPIO_USART6_TX	GPIO_USART6_TX_1
+#define GPIO_USART6_RX  GPIO_USART6_RX_1
+#define GPIO_USART6_TX  GPIO_USART6_TX_1
 
 /* UART DMA configuration for USART1/6 */
 #define DMAMAP_USART1_RX DMAMAP_USART1_RX_2
@@ -229,18 +229,18 @@
  * RX  - PA3 - TIM2CH4
  *
  */
-#define GPIO_TIM2_CH1OUT	GPIO_TIM2_CH1OUT_1
-#define GPIO_TIM2_CH2OUT	GPIO_TIM2_CH2OUT_1
-#define GPIO_TIM2_CH3OUT	GPIO_TIM2_CH3OUT_1
-#define GPIO_TIM2_CH4OUT	GPIO_TIM2_CH4OUT_1
+#define GPIO_TIM2_CH1OUT    GPIO_TIM2_CH1OUT_1
+#define GPIO_TIM2_CH2OUT    GPIO_TIM2_CH2OUT_1
+#define GPIO_TIM2_CH3OUT    GPIO_TIM2_CH3OUT_1
+#define GPIO_TIM2_CH4OUT    GPIO_TIM2_CH4OUT_1
 
 /*
  * PPM
  *
  * PPM input is handled by the HRT timer.
  */
-#define HRT_PPM_CHANNEL	3	/* use capture/compare channel 3 */
-#define GPIO_PPM_IN	(GPIO_ALT|GPIO_AF1|GPIO_SPEED_50MHz|GPIO_PULLUP|GPIO_PORTA|GPIO_PIN10)
+#define HRT_PPM_CHANNEL 3   /* use capture/compare channel 3 */
+#define GPIO_PPM_IN (GPIO_ALT|GPIO_AF1|GPIO_SPEED_50MHz|GPIO_PULLUP|GPIO_PORTA|GPIO_PIN10)
 
 /*
  * CAN
@@ -248,8 +248,8 @@
  * CAN2 is routed to the expansion connector.
  */
 
-#define GPIO_CAN2_RX	GPIO_CAN2_RX_1
-#define GPIO_CAN2_TX	GPIO_CAN2_TX_1
+#define GPIO_CAN2_RX    GPIO_CAN2_RX_1
+#define GPIO_CAN2_TX    GPIO_CAN2_TX_1
 
 /*
  * I2C
@@ -258,53 +258,53 @@
  * reset the bus to clear stuck slaves.  They match the pin configuration,
  * but are normally-high GPIOs.
  */
-#define GPIO_I2C1_SCL		GPIO_I2C1_SCL_2
-#define GPIO_I2C1_SDA		GPIO_I2C1_SDA_2
-#define GPIO_I2C1_SCL_GPIO	(GPIO_OUTPUT|GPIO_OPENDRAIN|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTB|GPIO_PIN8)
-#define GPIO_I2C1_SDA_GPIO	(GPIO_OUTPUT|GPIO_OPENDRAIN|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTB|GPIO_PIN9)
+#define GPIO_I2C1_SCL       GPIO_I2C1_SCL_2
+#define GPIO_I2C1_SDA       GPIO_I2C1_SDA_2
+#define GPIO_I2C1_SCL_GPIO  (GPIO_OUTPUT|GPIO_OPENDRAIN|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTB|GPIO_PIN8)
+#define GPIO_I2C1_SDA_GPIO  (GPIO_OUTPUT|GPIO_OPENDRAIN|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTB|GPIO_PIN9)
 
-#define GPIO_I2C2_SCL		GPIO_I2C2_SCL_1
-#define GPIO_I2C2_SDA		GPIO_I2C2_SDA_1
-#define GPIO_I2C2_SCL_GPIO	(GPIO_OUTPUT|GPIO_OPENDRAIN|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTB|GPIO_PIN10)
-#define GPIO_I2C2_SDA_GPIO	(GPIO_OUTPUT|GPIO_OPENDRAIN|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTB|GPIO_PIN11)
+#define GPIO_I2C2_SCL       GPIO_I2C2_SCL_1
+#define GPIO_I2C2_SDA       GPIO_I2C2_SDA_1
+#define GPIO_I2C2_SCL_GPIO  (GPIO_OUTPUT|GPIO_OPENDRAIN|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTB|GPIO_PIN10)
+#define GPIO_I2C2_SDA_GPIO  (GPIO_OUTPUT|GPIO_OPENDRAIN|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTB|GPIO_PIN11)
 
-#define GPIO_I2C3_SCL		GPIO_I2C3_SCL_1
-#define GPIO_I2C3_SDA		GPIO_I2C3_SDA_1
-#define GPIO_I2C3_SCL_GPIO	(GPIO_OUTPUT|GPIO_OPENDRAIN|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTA|GPIO_PIN8)
-#define GPIO_I2C3_SDA_GPIO	(GPIO_OUTPUT|GPIO_OPENDRAIN|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTC|GPIO_PIN9)
+#define GPIO_I2C3_SCL       GPIO_I2C3_SCL_1
+#define GPIO_I2C3_SDA       GPIO_I2C3_SDA_1
+#define GPIO_I2C3_SCL_GPIO  (GPIO_OUTPUT|GPIO_OPENDRAIN|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTA|GPIO_PIN8)
+#define GPIO_I2C3_SDA_GPIO  (GPIO_OUTPUT|GPIO_OPENDRAIN|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTC|GPIO_PIN9)
 
 /*
  * I2C busses
  */
-#define PX4_I2C_BUS_ESC		1
-#define PX4_I2C_BUS_ONBOARD	2
-#define PX4_I2C_BUS_EXPANSION	3
+#define PX4_I2C_BUS_ESC     1
+#define PX4_I2C_BUS_ONBOARD 2
+#define PX4_I2C_BUS_EXPANSION   3
 
 /*
  * Devices on the onboard bus.
  *
  * Note that these are unshifted addresses.
  */
-#define PX4_I2C_OBDEV_HMC5883	0x1e
-#define PX4_I2C_OBDEV_MS5611	0x76
-#define PX4_I2C_OBDEV_EEPROM	NOTDEFINED
+#define PX4_I2C_OBDEV_HMC5883   0x1e
+#define PX4_I2C_OBDEV_MS5611    0x76
+#define PX4_I2C_OBDEV_EEPROM    NOTDEFINED
 
-#define PX4_I2C_OBDEV_PX4IO_BL	0x18
-#define PX4_I2C_OBDEV_PX4IO	0x1a
+#define PX4_I2C_OBDEV_PX4IO_BL  0x18
+#define PX4_I2C_OBDEV_PX4IO 0x1a
 
 /*
  * SPI
  *
  * There are sensors on SPI1, and SPI3 is connected to the microSD slot.
  */
-#define GPIO_SPI1_MISO	GPIO_SPI1_MISO_1
-#define GPIO_SPI1_MOSI	GPIO_SPI1_MOSI_1
-#define GPIO_SPI1_SCK	GPIO_SPI1_SCK_1
+#define GPIO_SPI1_MISO  GPIO_SPI1_MISO_1
+#define GPIO_SPI1_MOSI  GPIO_SPI1_MOSI_1
+#define GPIO_SPI1_SCK   GPIO_SPI1_SCK_1
 
-#define GPIO_SPI3_MISO	GPIO_SPI3_MISO_2
-#define GPIO_SPI3_MOSI	GPIO_SPI3_MOSI_1
-#define GPIO_SPI3_SCK	GPIO_SPI3_SCK_2
-#define GPIO_SPI3_NSS	GPIO_SPI3_NSS_2
+#define GPIO_SPI3_MISO  GPIO_SPI3_MISO_2
+#define GPIO_SPI3_MOSI  GPIO_SPI3_MOSI_1
+#define GPIO_SPI3_SCK   GPIO_SPI3_SCK_2
+#define GPIO_SPI3_NSS   GPIO_SPI3_NSS_2
 
 /* SPI DMA configuration for SPI3 (microSD) */
 #define DMACHAN_SPI3_RX DMAMAP_SPI3_RX_1
@@ -320,9 +320,9 @@
  * Use these in place of the spi_dev_e enumeration to
  * select a specific SPI device on SPI1
  */
-#define PX4_SPIDEV_GYRO		1
-#define PX4_SPIDEV_ACCEL	2
-#define PX4_SPIDEV_MPU		3
+#define PX4_SPIDEV_GYRO     1
+#define PX4_SPIDEV_ACCEL    2
+#define PX4_SPIDEV_MPU      3
 
 /*
  * Optional devices on IO's external port
@@ -332,10 +332,10 @@
 /*
  * Tone alarm output
  */
-#define TONE_ALARM_TIMER	3	/* timer 3 */
-#define TONE_ALARM_CHANNEL	3	/* channel 3 */
-#define GPIO_TONE_ALARM_IDLE	(GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_CLEAR|GPIO_PORTC|GPIO_PIN8)
-#define GPIO_TONE_ALARM		(GPIO_ALT|GPIO_AF2|GPIO_SPEED_2MHz|GPIO_FLOAT|GPIO_PUSHPULL|GPIO_PORTC|GPIO_PIN8)
+#define TONE_ALARM_TIMER    3   /* timer 3 */
+#define TONE_ALARM_CHANNEL  3   /* channel 3 */
+#define GPIO_TONE_ALARM_IDLE    (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_CLEAR|GPIO_PORTC|GPIO_PIN8)
+#define GPIO_TONE_ALARM     (GPIO_ALT|GPIO_AF2|GPIO_SPEED_2MHz|GPIO_FLOAT|GPIO_PUSHPULL|GPIO_PORTC|GPIO_PIN8)
 
 /************************************************************************************
  * Public Data

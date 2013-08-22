@@ -1,4 +1,4 @@
-Passthrough mixer for PX4FMU
+Passthrough mixer for TMRFC
 ============================
 
 This file defines passthrough mixers suitable for testing.

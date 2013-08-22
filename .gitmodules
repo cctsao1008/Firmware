@@ -1,0 +1,9 @@
+[submodule "NuttX"]
+	path = NuttX
+	url = https://github.com/cctsao1008/NuttX
+[submodule "Bootloader"]
+	path = Bootloader
+	url = https://github.com/cctsao1008/Bootloader
+[submodule "libopencm3"]
+	path = libopencm3
+	url = git@github.com:cctsao1008/libopencm3.git

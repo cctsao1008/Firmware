@@ -82,7 +82,11 @@ int i2c_main(int argc, char *argv[])
     uint32_t val;
     uint8_t buf[] = { 0, 4};
 
-    #if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
+    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+    i2c = up_i2cinitialize(TMR_I2C_BUS_ONBOARD);
+    if (i2c == NULL)
+		errx(1, "failed to locate I2C bus");
+    #else
     i2c = up_i2cinitialize(PX4_I2C_BUS_ONBOARD);
 
     if (i2c == NULL)
@@ -98,11 +102,6 @@ int i2c_main(int argc, char *argv[])
 	ret = transfer(PX4_I2C_OBDEV_PX4IO, NULL, 0, (uint8_t *)&val, sizeof(val));
 	if (ret)
 		errx(1, "recive failed - %d", ret);
-    
-    #elif defined(CONFIG_ARCH_BOARD_TMRFC_V1)
-    i2c = up_i2cinitialize(TMR_I2C_BUS_ONBOARD);
-    if (i2c == NULL)
-		errx(1, "failed to locate I2C bus");
     #endif
 
 	errx(0, "got 0x%08x", val);

@@ -1,8 +1,8 @@
-Delta-wing mixer for PX4FMU
+Delta-wing mixer for TMRFC
 ===========================
 
 This file defines mixers suitable for controlling a delta wing aircraft using
-PX4FMU. The configuration assumes the elevon servos are connected to PX4FMU
+TMRFC. The configuration assumes the elevon servos are connected to TMRFC
 servo outputs 0 and 1 and the motor speed control to output 3. Output 2 is
 assumed to be unused.
 

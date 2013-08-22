@@ -1,4 +1,4 @@
-PX4 mixer definitions
+TMR mixer definitions
 =====================
 
 Files in this directory implement example mixers that can be used as a basis

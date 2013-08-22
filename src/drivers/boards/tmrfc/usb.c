@@ -85,7 +85,6 @@ __EXPORT void stm32_usbinitialize(void)
     stm32_configgpio(GPIO_OTGFS_VBUS);
     stm32_configgpio(GPIO_OTGFS_PWRON);
     stm32_configgpio(GPIO_OTGFS_OVER);
-    */
 #endif
 }
 
