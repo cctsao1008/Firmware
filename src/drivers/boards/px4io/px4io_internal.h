@@ -32,9 +32,9 @@
  ****************************************************************************/
  
 /**
- * @file internal.h
+ * @file px4io_internal.h
  * 
- * PX4IO internal definitions.
+ * PX4IO hardware definitions.
  */
 
 #pragma once
@@ -58,10 +58,8 @@
 
 #define GPIO_LED1       (GPIO_OUTPUT|GPIO_CNF_OUTPP|GPIO_MODE_50MHz|\
                          GPIO_OUTPUT_CLEAR|GPIO_PORTB|GPIO_PIN14)
-                         
 #define GPIO_LED2       (GPIO_OUTPUT|GPIO_CNF_OUTPP|GPIO_MODE_50MHz|\
                          GPIO_OUTPUT_CLEAR|GPIO_PORTB|GPIO_PIN15)
-                         
 #define GPIO_LED3       (GPIO_OUTPUT|GPIO_CNF_OUTPP|GPIO_MODE_50MHz|\
                          GPIO_OUTPUT_CLEAR|GPIO_PORTB|GPIO_PIN10)
 
@@ -83,5 +81,5 @@
 
 /* Analog inputs ********************************************************************/
 
-#define GPIO_ADC_VBATT  (GPIO_INPUT|GPIO_CNF_ANALOGIN|GPIO_MODE_INPUT|GPIO_PORTA|GPIO_PIN4)
-#define GPIO_ADC_IN5    (GPIO_INPUT|GPIO_CNF_ANALOGIN|GPIO_MODE_INPUT|GPIO_PORTA|GPIO_PIN5)
+#define GPIO_ADC_VBATT	(GPIO_INPUT|GPIO_CNF_ANALOGIN|GPIO_MODE_INPUT|GPIO_PORTA|GPIO_PIN4)
+#define GPIO_ADC_IN5	(GPIO_INPUT|GPIO_CNF_ANALOGIN|GPIO_MODE_INPUT|GPIO_PORTA|GPIO_PIN5)

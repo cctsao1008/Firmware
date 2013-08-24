@@ -32,7 +32,7 @@
  ****************************************************************************/
 
 /**
- * @file init.c
+ * @file px4fmu_init.c
  *
  * PX4FMU-specific early startup code.  This file implements the
  * nsh_archinitialize() function that is called early by nsh during startup.
@@ -53,13 +53,13 @@
 #include <errno.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/spi/spi.h>
+#include <nuttx/spi.h>
 #include <nuttx/i2c.h>
 #include <nuttx/mmcsd.h>
 #include <nuttx/analog/adc.h>
 
 #include "stm32.h"
-#include "internal.h"
+#include "px4fmu_internal.h"
 #include "stm32_uart.h"
 
 #include <arch/board/board.h>
@@ -124,11 +124,11 @@ __END_DECLS
 
 __EXPORT void stm32_boardinitialize(void)
 {
-    /* configure SPI interfaces */
-    stm32_spiinitialize();
+	/* configure SPI interfaces */
+	stm32_spiinitialize();
 
-    /* configure LEDs (empty call to NuttX' ledinit) */
-    up_ledinit();
+	/* configure LEDs (empty call to NuttX' ledinit) */
+	up_ledinit();
 }
 
 /****************************************************************************
@@ -148,121 +148,121 @@ static struct spi_dev_s *spi3;
 #ifdef __cplusplus
 __EXPORT int matherr(struct __exception *e)
 {
-    return 1;
+	return 1;
 }
 #else
 __EXPORT int matherr(struct exception *e)
 {
-    return 1;
+	return 1;
 }
 #endif
 
 __EXPORT int nsh_archinitialize(void)
 {
-    int result;
+	int result;
 
-    /* configure always-on ADC pins */
-    stm32_configgpio(GPIO_ADC1_IN10);
-    stm32_configgpio(GPIO_ADC1_IN11);
-    /* IN12 and IN13 further below */
+	/* configure always-on ADC pins */
+	stm32_configgpio(GPIO_ADC1_IN10);
+	stm32_configgpio(GPIO_ADC1_IN11);
+	/* IN12 and IN13 further below */
 
-    /* configure the high-resolution time/callout interface */
-    hrt_init();
+	/* configure the high-resolution time/callout interface */
+	hrt_init();
 
-    /* configure CPU load estimation */
+	/* configure CPU load estimation */
 #ifdef CONFIG_SCHED_INSTRUMENTATION
-    cpuload_initialize_once();
+	cpuload_initialize_once();
 #endif
 
-    /* set up the serial DMA polling */
-    static struct hrt_call serial_dma_call;
-    struct timespec ts;
+	/* set up the serial DMA polling */
+	static struct hrt_call serial_dma_call;
+	struct timespec ts;
 
-    /*
-     * Poll at 1ms intervals for received bytes that have not triggered
-     * a DMA event.
-     */
-    ts.tv_sec = 0;
-    ts.tv_nsec = 1000000;
+	/*
+	 * Poll at 1ms intervals for received bytes that have not triggered
+	 * a DMA event.
+	 */
+	ts.tv_sec = 0;
+	ts.tv_nsec = 1000000;
 
-    hrt_call_every(&serial_dma_call,
-               ts_to_abstime(&ts),
-               ts_to_abstime(&ts),
-               (hrt_callout)stm32_serial_dma_poll,
-               NULL);
+	hrt_call_every(&serial_dma_call,
+		       ts_to_abstime(&ts),
+		       ts_to_abstime(&ts),
+		       (hrt_callout)stm32_serial_dma_poll,
+		       NULL);
 
-    /* initial LED state */
-    drv_led_start();
-    led_off(LED_AMBER);
-    led_off(LED_BLUE);
+	/* initial LED state */
+	drv_led_start();
+	led_off(LED_AMBER);
+	led_off(LED_BLUE);
 
 
-    /* Configure SPI-based devices */
+	/* Configure SPI-based devices */
 
-    spi1 = up_spiinitialize(1);
+	spi1 = up_spiinitialize(1);
 
-    if (!spi1) {
-        message("[boot] FAILED to initialize SPI port 1\r\n");
-        up_ledon(LED_AMBER);
-        return -ENODEV;
-    }
+	if (!spi1) {
+		message("[boot] FAILED to initialize SPI port 1\r\n");
+		up_ledon(LED_AMBER);
+		return -ENODEV;
+	}
 
-    /* Default SPI1 to 1MHz and de-assert the known chip selects. */
-    SPI_SETFREQUENCY(spi1, 10000000);
-    SPI_SETBITS(spi1, 8);
-    SPI_SETMODE(spi1, SPIDEV_MODE3);
-    SPI_SELECT(spi1, PX4_SPIDEV_GYRO, false);
-    SPI_SELECT(spi1, PX4_SPIDEV_ACCEL, false);
-    SPI_SELECT(spi1, PX4_SPIDEV_MPU, false);
-    up_udelay(20);
+	/* Default SPI1 to 1MHz and de-assert the known chip selects. */
+	SPI_SETFREQUENCY(spi1, 10000000);
+	SPI_SETBITS(spi1, 8);
+	SPI_SETMODE(spi1, SPIDEV_MODE3);
+	SPI_SELECT(spi1, PX4_SPIDEV_GYRO, false);
+	SPI_SELECT(spi1, PX4_SPIDEV_ACCEL, false);
+	SPI_SELECT(spi1, PX4_SPIDEV_MPU, false);
+	up_udelay(20);
 
-    message("[boot] Successfully initialized SPI port 1\r\n");
+	message("[boot] Successfully initialized SPI port 1\r\n");
 
-    /*
-     * If SPI2 is enabled in the defconfig, we loose some ADC pins as chip selects.
-     * Keep the SPI2 init optional and conditionally initialize the ADC pins
-     */
-    spi2 = up_spiinitialize(2);
+	/*
+	 * If SPI2 is enabled in the defconfig, we loose some ADC pins as chip selects.
+	 * Keep the SPI2 init optional and conditionally initialize the ADC pins
+	 */
+	spi2 = up_spiinitialize(2);
 
-    if (!spi2) {
-        message("[boot] Enabling IN12/13 instead of SPI2\n");
-        /* no SPI2, use pins for ADC */
-        stm32_configgpio(GPIO_ADC1_IN12);
-        stm32_configgpio(GPIO_ADC1_IN13);   // jumperable to MPU6000 DRDY on some boards
-    } else {
-        /* Default SPI2 to 1MHz and de-assert the known chip selects. */
-        SPI_SETFREQUENCY(spi2, 10000000);
-        SPI_SETBITS(spi2, 8);
-        SPI_SETMODE(spi2, SPIDEV_MODE3);
-        SPI_SELECT(spi2, PX4_SPIDEV_GYRO, false);
-        SPI_SELECT(spi2, PX4_SPIDEV_ACCEL_MAG, false);
+	if (!spi2) {
+		message("[boot] Enabling IN12/13 instead of SPI2\n");
+		/* no SPI2, use pins for ADC */
+		stm32_configgpio(GPIO_ADC1_IN12);
+		stm32_configgpio(GPIO_ADC1_IN13);	// jumperable to MPU6000 DRDY on some boards
+	} else {
+		/* Default SPI2 to 1MHz and de-assert the known chip selects. */
+		SPI_SETFREQUENCY(spi2, 10000000);
+		SPI_SETBITS(spi2, 8);
+		SPI_SETMODE(spi2, SPIDEV_MODE3);
+		SPI_SELECT(spi2, PX4_SPIDEV_GYRO, false);
+		SPI_SELECT(spi2, PX4_SPIDEV_ACCEL_MAG, false);
 
-        message("[boot] Initialized SPI port2 (ADC IN12/13 blocked)\n");
-    }
+		message("[boot] Initialized SPI port2 (ADC IN12/13 blocked)\n");
+	}
 
-    /* Get the SPI port for the microSD slot */
+	/* Get the SPI port for the microSD slot */
 
-    message("[boot] Initializing SPI port 3\n");
-    spi3 = up_spiinitialize(3);
+	message("[boot] Initializing SPI port 3\n");
+	spi3 = up_spiinitialize(3);
 
-    if (!spi3) {
-        message("[boot] FAILED to initialize SPI port 3\n");
-        up_ledon(LED_AMBER);
-        return -ENODEV;
-    }
+	if (!spi3) {
+		message("[boot] FAILED to initialize SPI port 3\n");
+		up_ledon(LED_AMBER);
+		return -ENODEV;
+	}
 
-    message("[boot] Successfully initialized SPI port 3\n");
+	message("[boot] Successfully initialized SPI port 3\n");
 
-    /* Now bind the SPI interface to the MMCSD driver */
-    result = mmcsd_spislotinitialize(CONFIG_NSH_MMCSDMINOR, CONFIG_NSH_MMCSDSLOTNO, spi3);
+	/* Now bind the SPI interface to the MMCSD driver */
+	result = mmcsd_spislotinitialize(CONFIG_NSH_MMCSDMINOR, CONFIG_NSH_MMCSDSLOTNO, spi3);
 
-    if (result != OK) {
-        message("[boot] FAILED to bind SPI port 3 to the MMCSD driver\n");
-        up_ledon(LED_AMBER);
-        return -ENODEV;
-    }
+	if (result != OK) {
+		message("[boot] FAILED to bind SPI port 3 to the MMCSD driver\n");
+		up_ledon(LED_AMBER);
+		return -ENODEV;
+	}
 
-    message("[boot] Successfully bound SPI port 3 to the MMCSD driver\n");
+	message("[boot] Successfully bound SPI port 3 to the MMCSD driver\n");
 
-    return OK;
+	return OK;
 }

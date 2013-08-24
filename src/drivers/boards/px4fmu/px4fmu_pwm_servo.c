@@ -31,66 +31,57 @@
  *
  ****************************************************************************/
 
-/**
- * @file led.c
+/*
+ * @file px4fmu_pwm_servo.c
  *
- * PX4FMU LED backend.
+ * Configuration data for the stm32 pwm_servo driver.
+ *
+ * Note that these arrays must always be fully-sized.
  */
 
-#include <nuttx/config.h>
+#include <stdint.h>
 
-#include <stdbool.h>
-
-#include "stm32.h"
-#include "internal.h"
+#include <drivers/stm32/drv_pwm_servo.h>
 
 #include <arch/board/board.h>
+#include <drivers/drv_pwm_output.h>
 
-/*
- * Ideally we'd be able to get these from up_internal.h,
- * but since we want to be able to disable the NuttX use
- * of leds for system indication at will and there is no
- * separate switch, we need to build independent of the
- * CONFIG_ARCH_LEDS configuration switch.
- */
-__BEGIN_DECLS
-extern void led_init();
-extern void led_on(int led);
-extern void led_off(int led);
-__END_DECLS
+#include <stm32.h>
+#include <stm32_gpio.h>
+#include <stm32_tim.h>
 
-__EXPORT void led_init()
-{
-    /* Configure LED1-2 GPIOs for output */
+__EXPORT const struct pwm_servo_timer pwm_timers[PWM_SERVO_MAX_TIMERS] = {
+	{
+		.base = STM32_TIM2_BASE,
+		.clock_register = STM32_RCC_APB1ENR,
+		.clock_bit = RCC_APB1ENR_TIM2EN,
+		.clock_freq = STM32_APB1_TIM2_CLKIN
+	}
+};
 
-    stm32_configgpio(GPIO_LED1);
-    stm32_configgpio(GPIO_LED2);
-}
-
-__EXPORT void led_on(int led)
-{
-    if (led == 0)
-    {
-        /* Pull down to switch on */
-        stm32_gpiowrite(GPIO_LED1, false);
-    }
-    if (led == 1)
-    {
-        /* Pull down to switch on */
-        stm32_gpiowrite(GPIO_LED2, false);
-    }
-}
-
-__EXPORT void led_off(int led)
-{
-    if (led == 0)
-    {
-        /* Pull up to switch off */
-        stm32_gpiowrite(GPIO_LED1, true);
-    }
-    if (led == 1)
-    {
-        /* Pull up to switch off */
-        stm32_gpiowrite(GPIO_LED2, true);
-    }
-}
+__EXPORT const struct pwm_servo_channel pwm_channels[PWM_SERVO_MAX_CHANNELS] = {
+	{
+		.gpio = GPIO_TIM2_CH1OUT,
+		.timer_index = 0,
+		.timer_channel = 1,
+		.default_value = 1000,
+	},
+	{
+		.gpio = GPIO_TIM2_CH2OUT,
+		.timer_index = 0,
+		.timer_channel = 2,
+		.default_value = 1000,
+	},
+	{
+		.gpio = GPIO_TIM2_CH3OUT,
+		.timer_index = 0,
+		.timer_channel = 3,
+		.default_value = 1000,
+	},
+	{
+		.gpio = GPIO_TIM2_CH4OUT,
+		.timer_index = 0,
+		.timer_channel = 4,
+		.default_value = 1000,
+	}
+};
