@@ -42,7 +42,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include <drivers/boards/px4io/internal.h>
+#include <drivers/boards/px4io/px4io_internal.h>
 
 #include "protocol.h"
 

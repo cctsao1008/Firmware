@@ -62,7 +62,7 @@
 #include <drivers/device/device.h>
 #include <drivers/drv_pwm_output.h>
 #include <drivers/drv_gpio.h>
-#include <drivers/boards/px4fmu/internal.h>
+#include <drivers/boards/px4fmu/px4fmu_internal.h>
 #include <drivers/drv_hrt.h>
 #include <drivers/drv_rc_input.h>
 
