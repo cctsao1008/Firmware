@@ -78,7 +78,17 @@ class TMRFC : public device::CDev
 public:
     enum Mode {
         MODE_2PWM,
+		MODE_3PWM,
         MODE_4PWM,
+        MODE_5PWM,
+        MODE_6PWM,
+        MODE_7PWM,
+        MODE_8PWM,
+        MODE_9PWM,
+        MODE_10PWM,
+        MODE_11PWM,
+        MODE_12PWM,
+        MODE_13PWM,
         MODE_NONE
     };
     TMRFC();
@@ -273,8 +283,11 @@ TMRFC::set_mode(Mode mode)
      * are presented on the output pins.
      */
     switch (mode) {
-    case MODE_2PWM: // multi-port with flow control lines as PWM
-    case MODE_4PWM: // multi-port as 4 PWM outs
+    case MODE_2PWM:
+	case MODE_3PWM:
+    case MODE_4PWM:
+    case MODE_5PWM:
+    case MODE_6PWM:
         debug("MODE_%dPWM", (mode == MODE_2PWM) ? 2 : 4);
         
         /* default output rates */

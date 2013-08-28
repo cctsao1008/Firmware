@@ -53,7 +53,6 @@
 #include <errno.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/spi/spi.h>
 #include <nuttx/i2c.h>
 #include <nuttx/mmcsd.h>
 #include <nuttx/analog/adc.h>
@@ -126,6 +125,9 @@ __EXPORT void stm32_boardinitialize(void)
 {
     /* configure SPI interfaces */
     stm32_spiinitialize();
+
+    /* configure SPI interfaces */
+    stm32_usbinitialize
 
     /* configure LEDs (empty call to NuttX' ledinit) */
     up_ledinit();
@@ -270,6 +272,8 @@ __EXPORT int nsh_archinitialize(void)
 
     message("[boot] Successfully bound SPI port 3 to the MMCSD driver\n");
     #endif
+
+    #if 1
     /* Mount the SDIO-based MMC/SD block driver first and get an instance of the SDIO interface */
     message("[boot] Initializing SDIO slot %d\n", CONFIG_NSH_MMCSDSLOTNO);
     sdio = sdio_initialize(CONFIG_NSH_MMCSDSLOTNO);
@@ -300,6 +304,7 @@ __EXPORT int nsh_archinitialize(void)
         message("[boot] FAILED to initialize SPI port 3\n");
         return -ENODEV;
     }
+    #endif
 
     return OK;
 }

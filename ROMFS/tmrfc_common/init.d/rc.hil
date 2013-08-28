@@ -42,7 +42,7 @@ fc mode_serial
 echo "FC started"
 
 #
-# Start the sensors (depends on orb, px4io)
+# Start the sensors (depends on orb)
 #
 sh /etc/init.d/rc.sensors
 

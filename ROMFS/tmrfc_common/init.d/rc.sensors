@@ -1,6 +1,6 @@
 #!nsh
 #
-# Standard startup script for PX4FMU onboard sensor drivers.
+# Standard startup script for TMRFC onboard sensor drivers.
 #
 
 #
@@ -19,11 +19,12 @@ adc start
 
 if mpu6050 start
 then
-	echo "using MPU6050, HMC5883L and MS5611"
+	echo "using MPU6050, HMC5883L"
 	hmc5883 start
-	ms5611 start
 else
 	echo "Failed to start MPU6050"
+ms5611 start
+
 fi
 
 #

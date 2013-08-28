@@ -42,8 +42,13 @@
 #include <drivers/drv_pwm_output.h>
 
 /* configuration limits */
+#if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
 #define PWM_SERVO_MAX_TIMERS	6
-#define PWM_SERVO_MAX_CHANNELS	14
+#define PWM_SERVO_MAX_CHANNELS	13
+#else
+#define PWM_SERVO_MAX_TIMERS	4
+#define PWM_SERVO_MAX_CHANNELS	8
+#endif
 
 /* array of timers dedicated to PWM servo use */
 struct pwm_servo_timer {

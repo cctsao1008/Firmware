@@ -1,9 +1,9 @@
 #!nsh
 #
-# Flight startup script for PX4FMU standalone configuration.
+# Flight startup script for TMRFC standalone configuration.
 #
 
-echo "[init] doing standalone PX4FMU startup..."
+echo "[init] doing standalone TMRFC startup..."
 
 #
 # Start the ORB

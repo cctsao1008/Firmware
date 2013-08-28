@@ -47,7 +47,8 @@
  * TMRFC GPIO numbers.
  */
 # define TMRFC_DEVICE_PATH	"/dev/tmrfc"
-#elif defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
+
+#else
 /*
  * PX4FMU GPIO numbers.
  *
