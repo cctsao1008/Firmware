@@ -21,7 +21,7 @@ Note :  To using "QUpgrade" if you have " tmrfc_bl.bin" been pre-flashed !!!
     1. Get the tool :  https://pixhawk.ethz.ch/px4/downloads
     2. Open "QUpgrade" tool
     3. Select "Advanced"
-    4. Select your "tmrfc_bl.px4"
+    4. Select your "tmrfc-v1_default.px4"
     5. Click "Flash"
     6. Connect your TMRFC board via USB, OR click "RESET" key on TMRFC board
 
