@@ -58,16 +58,27 @@
 #include "systemlib/err.h"
 
 #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
-#ifndef TMR_I2C_BUS_ONBOARD
-#  error TMR_I2C_BUS_ONBOARD not defined, no device interface
-#endif
+
+#define PCA9536DP_ADDRESS    0x41
+#define PCA9533DP_ADDRESS    0x62
+#define MPU6050_ADDRESS      0x69
+#define HMC5883L_ADDRESS     0x1E
+#define MS5611_ADDRESS       0x77
+
+ #ifndef TMR_I2C_BUS_ONBOARD
+ #  error TMR_I2C_BUS_ONBOARD not defined, no device interface
+ #endif
+ 
 #else
-#ifndef PX4_I2C_BUS_ONBOARD
-#  error PX4_I2C_BUS_ONBOARD not defined, no device interface
-#endif
-#ifndef PX4_I2C_OBDEV_PX4IO
-#  error PX4_I2C_OBDEV_PX4IO not defined
-#endif
+
+ #ifndef PX4_I2C_BUS_ONBOARD
+ #  error PX4_I2C_BUS_ONBOARD not defined, no device interface
+ #endif
+
+ #ifndef PX4_I2C_OBDEV_PX4IO
+ #  error PX4_I2C_OBDEV_PX4IO not defined
+ #endif
+
 #endif
 
 __EXPORT int i2c_main(int argc, char *argv[]);
@@ -83,10 +94,37 @@ int i2c_main(int argc, char *argv[])
     uint8_t buf[] = { 0, 4};
 
     #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+
     i2c = up_i2cinitialize(TMR_I2C_BUS_ONBOARD);
     if (i2c == NULL)
-		errx(1, "failed to locate I2C bus");
+		errx(1, "failed to locate I2C bus\n");
+
+    usleep(100000);
+
+    printf("Detecting on board ensors......\n");
+
+    int ret = transfer(PCA9533DP_ADDRESS, NULL, 0, (uint8_t *)&val, sizeof(val));
+	if (ret)
+        printf("(PCA9533DP) recive failed - %d\n", ret);
+    else
+        printf("Have PCA9533DP\n");
+
+    ret = transfer(PCA9536DP_ADDRESS, NULL, 0, (uint8_t *)&val, sizeof(val));
+	if (ret)
+		printf("(PCA9536DP) recive failed - %d\n", ret);
+	else
+	    printf("Have PCA9536DP\n");
+
+	ret = transfer(MPU6050_ADDRESS, NULL, 0, (uint8_t *)&val, sizeof(val));
+	if (ret)
+		printf("(MPU6050) recive failed - %d\n", ret);
+    else
+	    printf("Have MPU6050\n");
+
+	errx(0, "Done.\n");
+    
     #else
+
     i2c = up_i2cinitialize(PX4_I2C_BUS_ONBOARD);
 
     if (i2c == NULL)
@@ -102,9 +140,11 @@ int i2c_main(int argc, char *argv[])
 	ret = transfer(PX4_I2C_OBDEV_PX4IO, NULL, 0, (uint8_t *)&val, sizeof(val));
 	if (ret)
 		errx(1, "recive failed - %d", ret);
-    #endif
+    
 
 	errx(0, "got 0x%08x", val);
+
+	#endif
 }
 
 static int
