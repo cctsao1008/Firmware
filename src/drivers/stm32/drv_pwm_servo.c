@@ -111,7 +111,11 @@ pwm_timer_init(unsigned timer)
 	rCCER(timer) = 0;
 	rDCR(timer) = 0;
 
-	if ((pwm_timers[timer].base == STM32_TIM1_BASE) || (pwm_timers[timer].base == STM32_TIM8_BASE)) {
+	if ((pwm_timers[timer].base == STM32_TIM2_BASE) || 
+	    (pwm_timers[timer].base == STM32_TIM3_BASE) || 
+	    (pwm_timers[timer].base == STM32_TIM4_BASE) ||
+	    (pwm_timers[timer].base == STM32_TIM5_BASE) || 
+	    (pwm_timers[timer].base == STM32_TIM8_BASE)) {
 		/* master output enable = on */
 		rBDTR(timer) = ATIM_BDTR_MOE;
 	}

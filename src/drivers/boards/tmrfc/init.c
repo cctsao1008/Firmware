@@ -126,8 +126,8 @@ __EXPORT void stm32_boardinitialize(void)
     /* configure SPI interfaces */
     stm32_spiinitialize();
 
-    /* configure SPI interfaces */
-    stm32_usbinitialize
+    /* configure USB interfaces */
+    //stm32_usbinitialize
 
     /* configure LEDs (empty call to NuttX' ledinit) */
     up_ledinit();
@@ -144,6 +144,7 @@ __EXPORT void stm32_boardinitialize(void)
 static struct spi_dev_s *spi1;
 static struct spi_dev_s *spi2;
 #endif
+static struct spi_dev_s *spi;
 static struct spi_dev_s *spi3;
 static struct sdio_dev_s *sdio;
 
@@ -204,76 +205,43 @@ __EXPORT int nsh_archinitialize(void)
     led_off(LED_AMBER);
     led_off(LED_BLUE);
 
-    #if 0
-    /* Configure SPI-based devices */
+    #if defined(CONFIG_SPI_BITBANG) && defined(CONFIG_MMCSD_SPI)  /* Use SPI to access Micro SD card  */
+    
+    /* Get the SPI driver instance for the SD chip select */
+    message("[boot] Initializing bit bang SPI for the MMC/SD slot\n");
 
-    spi1 = up_spiinitialize(1);
+    spi = bitbang_mmcsd_spiinitialize();
 
-    if (!spi1) {
-        message("[boot] FAILED to initialize SPI port 1\r\n");
-        up_ledon(LED_AMBER);
-        return -ENODEV;
+    if (!spi)
+    {
+        message("[boot] Failed to bit bang SPI for the MMC/SD slot\n");
+            return -ENODEV;
+    }
+    else
+    {
+        message("[boot] Successfully initialized bit bang SPI for the MMC/SD slot\n");
+        message("[boot] Set SPI ferquency to 25000000Hz\n");
+        SPI_SETFREQUENCY(spi, 25000000);
     }
 
-    /* Default SPI1 to 1MHz and de-assert the known chip selects. */
-    SPI_SETFREQUENCY(spi1, 10000000);
-    SPI_SETBITS(spi1, 8);
-    SPI_SETMODE(spi1, SPIDEV_MODE3);
-    SPI_SELECT(spi1, TMR_SPIDEV_GYRO, false);
-    SPI_SELECT(spi1, TMR_SPIDEV_ACCEL, false);
-    SPI_SELECT(spi1, TMR_SPIDEV_MPU, false);
-    up_udelay(20);
+    /* Bind the SPI device for the chip select to the slot */
 
-    message("[boot] Successfully initialized SPI port 1\r\n");
+    message("[boot] Binding bit bang SPI device to MMC/SD slot %d\n",
+        CONFIG_NSH_MMCSDSLOTNO);
 
-    /*
-     * If SPI2 is enabled in the defconfig, we loose some ADC pins as chip selects.
-     * Keep the SPI2 init optional and conditionally initialize the ADC pins
-     */
-    spi2 = up_spiinitialize(2);
-
-    if (!spi2) {
-        message("[boot] Enabling IN12/13 instead of SPI2\n");
-        /* no SPI2, use pins for ADC */
-        stm32_configgpio(GPIO_ADC1_IN12);
-        stm32_configgpio(GPIO_ADC1_IN13);   // jumperable to MPU6000 DRDY on some boards
-    } else {
-        /* Default SPI2 to 1MHz and de-assert the known chip selects. */
-        SPI_SETFREQUENCY(spi2, 10000000);
-        SPI_SETBITS(spi2, 8);
-        SPI_SETMODE(spi2, SPIDEV_MODE3);
-        SPI_SELECT(spi2, TMR_SPIDEV_GYRO, false);
-        SPI_SELECT(spi2, TMR_SPIDEV_ACCEL_MAG, false);
-
-        message("[boot] Initialized SPI port2 (ADC IN12/13 blocked)\n");
+    result = mmcsd_spislotinitialize(CONFIG_NSH_MMCSDMINOR, CONFIG_NSH_MMCSDSLOTNO, spi);
+    if (result < 0)
+    {
+        message("[boot] Failed to bind  bit bang SPI device to MMC/SD slot %d: %d\n",
+            CONFIG_NSH_MMCSDSLOTNO, result);
+        return result;
     }
 
-    /* Get the SPI port for the microSD slot */
-
-    message("[boot] Initializing SPI port 3\n");
-    spi3 = up_spiinitialize(3);
-
-    if (!spi3) {
-        message("[boot] FAILED to initialize SPI port 3\n");
-        up_ledon(LED_AMBER);
-        return -ENODEV;
-    }
-
-    message("[boot] Successfully initialized SPI port 3\n");
-
-    /* Now bind the SPI interface to the MMCSD driver */
-    result = mmcsd_spislotinitialize(CONFIG_NSH_MMCSDMINOR, CONFIG_NSH_MMCSDSLOTNO, spi3);
-
-    if (result != OK) {
-        message("[boot] FAILED to bind SPI port 3 to the MMCSD driver\n");
-        up_ledon(LED_AMBER);
-        return -ENODEV;
-    }
-
-    message("[boot] Successfully bound SPI port 3 to the MMCSD driver\n");
-    #endif
-
-    #if 1
+    message("[boot] Successfuly bound  bit bang SPI device to MMC/SD slot %d\n",
+        CONFIG_NSH_MMCSDSLOTNO);
+        
+    #else  /* Use SDIO to access Micro SD card  */
+    
     /* Mount the SDIO-based MMC/SD block driver first and get an instance of the SDIO interface */
     message("[boot] Initializing SDIO slot %d\n", CONFIG_NSH_MMCSDSLOTNO);
     sdio = sdio_initialize(CONFIG_NSH_MMCSDSLOTNO);
@@ -295,16 +263,16 @@ __EXPORT int nsh_archinitialize(void)
   
     /* Then let's guess and say that there is a card in the slot */
     sdio_mediachange(sdio, true);
+    #endif
 
     /* Initializing SPI port 3 */
     message("[boot] Initializing SPI3\n");
     spi3 = up_spiinitialize(3);
 
     if (!spi3) {
-        message("[boot] FAILED to initialize SPI port 3\n");
+        message("[boot] Failed to initialize SPI port 3\n");
         return -ENODEV;
     }
-    #endif
 
     return OK;
 }

@@ -50,6 +50,12 @@
 #include <stm32_gpio.h>
 #include <stm32_tim.h>
 
+#define TIM2_INDEX 0
+#define TIM3_INDEX 1
+#define TIM4_INDEX 2
+#define TIM5_INDEX 3
+#define TIM8_INDEX 4
+
 __EXPORT const struct pwm_servo_timer pwm_timers[PWM_SERVO_MAX_TIMERS] = {
     {
         .base = STM32_TIM2_BASE,
@@ -82,12 +88,6 @@ __EXPORT const struct pwm_servo_timer pwm_timers[PWM_SERVO_MAX_TIMERS] = {
         .clock_freq = STM32_APB2_TIM8_CLKIN
     }
 };
-
-#define TIM2_INDEX 0
-#define TIM3_INDEX 1
-#define TIM4_INDEX 2
-#define TIM5_INDEX 3
-#define TIM8_INDEX 4
 
 __EXPORT const struct pwm_servo_channel pwm_channels[PWM_SERVO_MAX_CHANNELS] = {
     {

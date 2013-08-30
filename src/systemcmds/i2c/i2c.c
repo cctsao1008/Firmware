@@ -65,19 +65,43 @@
 #define HMC5883L_ADDRESS     0x1E
 #define MS5611_ADDRESS       0x77
 
- #ifndef TMR_I2C_BUS_ONBOARD
- #  error TMR_I2C_BUS_ONBOARD not defined, no device interface
- #endif
+/* Registers and Settings For MPU6050 */
+#define MPU6050_RA_INT_PIN_CFG              0x37
+
+#define MPU6050_INTCFG_INT_LEVEL_BIT        7
+#define MPU6050_INTCFG_INT_OPEN_BIT         6
+#define MPU6050_INTCFG_LATCH_INT_EN_BIT     5
+#define MPU6050_INTCFG_INT_RD_CLEAR_BIT     4
+#define MPU6050_INTCFG_FSYNC_INT_LEVEL_BIT  3
+#define MPU6050_INTCFG_FSYNC_INT_EN_BIT     2
+#define MPU6050_INTCFG_I2C_BYPASS_EN_BIT    1
+#define MPU6050_INTCFG_CLKOUT_EN_BIT        0
+
+#define MPU6050_RA_PWR_MGMT_1               0x6B
+
+#define MPU6050_PWR1_DEVICE_RESET_BIT       7
+#define MPU6050_PWR1_SLEEP_BIT              6
+#define MPU6050_PWR1_CYCLE_BIT              5
+#define MPU6050_PWR1_TEMP_DIS_BIT           3
+#define MPU6050_PWR1_CLK_SEL_BIT            2
+#define MPU6050_PWR1_CLK_SEL_LENGTH         3
+
+/* Commands For MS5611 */
+#define CMD_RESET                           0x1E
+
+#ifndef TMR_I2C_BUS_ONBOARD
+#  error TMR_I2C_BUS_ONBOARD not defined, no device interface
+#endif
  
 #else
 
- #ifndef PX4_I2C_BUS_ONBOARD
- #  error PX4_I2C_BUS_ONBOARD not defined, no device interface
- #endif
+#ifndef PX4_I2C_BUS_ONBOARD
+#  error PX4_I2C_BUS_ONBOARD not defined, no device interface
+#endif
 
- #ifndef PX4_I2C_OBDEV_PX4IO
- #  error PX4_I2C_OBDEV_PX4IO not defined
- #endif
+#ifndef PX4_I2C_OBDEV_PX4IO
+#  error PX4_I2C_OBDEV_PX4IO not defined
+#endif
 
 #endif
 
@@ -90,38 +114,92 @@ static struct i2c_dev_s *i2c;
 int i2c_main(int argc, char *argv[])
 {
 	/* find the right I2C */
-    uint32_t val;
+    uint32_t val, ret;
     uint8_t buf[] = { 0, 4};
 
     #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
 
     i2c = up_i2cinitialize(TMR_I2C_BUS_ONBOARD);
+    usleep(100000);
+
     if (i2c == NULL)
 		errx(1, "failed to locate I2C bus\n");
 
-    usleep(100000);
+    printf("Detecting on board sensors on I2C bus(I2C2) ......\n\n");
 
-    printf("Detecting on board ensors......\n");
+    ret = transfer(MPU6050_ADDRESS, buf, sizeof(buf), NULL, 0);
+    if (ret)
+		printf("MPU6050 send failed - %d\n", ret);
 
-    int ret = transfer(PCA9533DP_ADDRESS, NULL, 0, (uint8_t *)&val, sizeof(val));
+    ret = transfer(PCA9533DP_ADDRESS, NULL, 0, (uint8_t *)&val, sizeof(val));
 	if (ret)
-        printf("(PCA9533DP) recive failed - %d\n", ret);
+        printf("PCA9533DP recive failed - %d\n", ret);
     else
-        printf("Have PCA9533DP\n");
+        printf("( 0x%x ) Have PCA9533DP\n", PCA9533DP_ADDRESS);
 
     ret = transfer(PCA9536DP_ADDRESS, NULL, 0, (uint8_t *)&val, sizeof(val));
 	if (ret)
-		printf("(PCA9536DP) recive failed - %d\n", ret);
+		printf("PCA9536DP recive failed - %d\n", ret);
 	else
-	    printf("Have PCA9536DP\n");
-
+	    printf("( 0x%x ) Have PCA9536DP\n", PCA9536DP_ADDRESS);
+                
 	ret = transfer(MPU6050_ADDRESS, NULL, 0, (uint8_t *)&val, sizeof(val));
 	if (ret)
-		printf("(MPU6050) recive failed - %d\n", ret);
+		printf("MPU6050 recive failed - %d\n", ret);
     else
-	    printf("Have MPU6050\n");
+    {
+	    printf("( 0x%x ) Have MPU6050\n\n", MPU6050_ADDRESS);
+        printf("  Set MPU6050 auxiliary I2C bus to bypass mode......\n\n");
 
-	errx(0, "Done.\n");
+        buf[0] = MPU6050_RA_PWR_MGMT_1;
+        buf[1] = (1 << MPU6050_PWR1_DEVICE_RESET_BIT);
+
+        ret = transfer(MPU6050_ADDRESS, buf, sizeof(buf), NULL, 0); /* Reset command*/
+        if(ret)
+           printf("  MPU6050 send failed - %d\n", ret);
+
+        usleep(100000);
+
+        buf[0] = MPU6050_RA_PWR_MGMT_1;
+        buf[1] = 0x0;
+
+        ret = transfer(MPU6050_ADDRESS, buf, sizeof(buf), NULL, 0); /* Leave from sleep mode */
+        if(ret)
+           printf("  MPU6050 send failed - %d\n", ret);
+
+        usleep(100000);
+
+        buf[0] = MPU6050_RA_INT_PIN_CFG;
+        buf[1] = (1 << MPU6050_INTCFG_I2C_BYPASS_EN_BIT);
+
+        ret = transfer(MPU6050_ADDRESS, buf, sizeof(buf), NULL, 0); /* Disable MST I2C */
+        if(ret)
+           printf("  MPU6050 send failed - %d\n", ret);
+        else
+        {
+            printf("  Detecting sensors on MPU6050 auxiliary I2C bus......\n\n");
+
+            usleep(100000);
+
+            ret = transfer(HMC5883L_ADDRESS, NULL, 0, (uint8_t *)&val, sizeof(val));
+            if (ret)
+                printf("  HMC5883L recive failed - %d\n", ret);
+            else
+                printf("  ( 0x%x ) Have HMC5883L\n", HMC5883L_ADDRESS);
+
+            buf[0] = CMD_RESET;
+
+            ret = transfer(MS5611_ADDRESS, buf, 1, NULL, 0); /* Reset command*/
+            if (ret)
+                printf("  MS5611 recive failed - %d\n", ret);
+            else
+                printf("  ( 0x%x ) Have MS5611\n\n", MS5611_ADDRESS);
+        }
+            
+            
+	}
+
+	errx(0, "Done\n");
     
     #else
 
@@ -132,7 +210,7 @@ int i2c_main(int argc, char *argv[])
 
 	usleep(100000);
 
-	int ret = transfer(PX4_I2C_OBDEV_PX4IO, buf, sizeof(buf), NULL, 0);
+	ret = transfer(PX4_I2C_OBDEV_PX4IO, buf, sizeof(buf), NULL, 0);
 
 	if (ret)
 		errx(1, "send failed - %d", ret);

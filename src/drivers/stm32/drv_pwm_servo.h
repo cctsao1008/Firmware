@@ -43,7 +43,7 @@
 
 /* configuration limits */
 #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
-#define PWM_SERVO_MAX_TIMERS	6
+#define PWM_SERVO_MAX_TIMERS	5
 #define PWM_SERVO_MAX_CHANNELS	13
 #else
 #define PWM_SERVO_MAX_TIMERS	4

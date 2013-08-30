@@ -77,8 +77,10 @@ class TMRFC : public device::CDev
 {
 public:
     enum Mode {
+		MODE_NONE = 0,
+		MODE_1PWM,
         MODE_2PWM,
-		MODE_3PWM,
+        MODE_3PWM,
         MODE_4PWM,
         MODE_5PWM,
         MODE_6PWM,
@@ -89,7 +91,7 @@ public:
         MODE_11PWM,
         MODE_12PWM,
         MODE_13PWM,
-        MODE_NONE
+        MODE_NPWM
     };
     TMRFC();
     virtual ~TMRFC();
@@ -283,12 +285,20 @@ TMRFC::set_mode(Mode mode)
      * are presented on the output pins.
      */
     switch (mode) {
-    case MODE_2PWM:
-	case MODE_3PWM:
+    case MODE_1PWM:
+	case MODE_2PWM:
+    case MODE_3PWM:
     case MODE_4PWM:
     case MODE_5PWM:
     case MODE_6PWM:
-        debug("MODE_%dPWM", (mode == MODE_2PWM) ? 2 : 4);
+	case MODE_7PWM:
+	case MODE_8PWM:
+	case MODE_9PWM:
+	case MODE_10PWM:
+	case MODE_11PWM:
+	case MODE_12PWM:
+	case MODE_13PWM:
+        debug("MODE_%dPWM", mode);
         
         /* default output rates */
         _pwm_default_rate = 50;
@@ -296,7 +306,7 @@ TMRFC::set_mode(Mode mode)
         _pwm_alt_rate_channels = 0;
 
         /* XXX magic numbers */
-        up_pwm_servo_init((mode == MODE_2PWM) ? 0x3 : 0xf);
+        up_pwm_servo_init(0xffff);
         set_pwm_rate(_pwm_alt_rate_channels, _pwm_default_rate, _pwm_alt_rate);
 
         break;
@@ -592,8 +602,19 @@ TMRFC::ioctl(file *filp, int cmd, unsigned long arg)
 
     /* if we are in valid PWM mode, try it as a PWM ioctl as well */
     switch (_mode) {
+	case MODE_1PWM:
     case MODE_2PWM:
-    case MODE_4PWM:
+    case MODE_3PWM:
+	case MODE_4PWM:
+    case MODE_5PWM:
+	case MODE_6PWM:
+    case MODE_7PWM:
+	case MODE_8PWM:
+    case MODE_9PWM:
+	case MODE_10PWM:
+    case MODE_11PWM:
+	case MODE_12PWM:
+    case MODE_13PWM:
         ret = pwm_ioctl(filp, cmd, arg);
         break;
 
@@ -638,16 +659,19 @@ TMRFC::pwm_ioctl(file *filp, int cmd, unsigned long arg)
         ret = set_pwm_rate(arg, _pwm_default_rate, _pwm_alt_rate);
         break;
 
-    case PWM_SERVO_SET(2):
-    case PWM_SERVO_SET(3):
-        if (_mode != MODE_4PWM) {
-            ret = -EINVAL;
-            break;
-        }
-
-        /* FALLTHROUGH */
     case PWM_SERVO_SET(0):
     case PWM_SERVO_SET(1):
+	case PWM_SERVO_SET(2):
+    case PWM_SERVO_SET(3):
+	case PWM_SERVO_SET(4):
+    case PWM_SERVO_SET(5):
+	case PWM_SERVO_SET(6):
+    case PWM_SERVO_SET(7):
+	case PWM_SERVO_SET(8):
+    case PWM_SERVO_SET(9):
+	case PWM_SERVO_SET(10):
+    case PWM_SERVO_SET(11):
+	case PWM_SERVO_SET(12):
         if (arg < 2100) {
             up_pwm_servo_set(cmd - PWM_SERVO_SET(0), arg);
         } else {
@@ -656,16 +680,19 @@ TMRFC::pwm_ioctl(file *filp, int cmd, unsigned long arg)
 
         break;
 
-    case PWM_SERVO_GET(2):
-    case PWM_SERVO_GET(3):
-        if (_mode != MODE_4PWM) {
-            ret = -EINVAL;
-            break;
-        }
-
-        /* FALLTHROUGH */
     case PWM_SERVO_GET(0):
     case PWM_SERVO_GET(1):
+	case PWM_SERVO_GET(2):
+    case PWM_SERVO_GET(3):
+	case PWM_SERVO_GET(4):
+    case PWM_SERVO_GET(5):
+	case PWM_SERVO_GET(6):
+    case PWM_SERVO_GET(7):
+	case PWM_SERVO_GET(8):
+    case PWM_SERVO_GET(9):
+	case PWM_SERVO_GET(10):
+    case PWM_SERVO_GET(11):
+	case PWM_SERVO_GET(12):
         *(servo_position_t *)arg = up_pwm_servo_get(cmd - PWM_SERVO_GET(0));
         break;
 
@@ -673,17 +700,14 @@ TMRFC::pwm_ioctl(file *filp, int cmd, unsigned long arg)
     case PWM_SERVO_GET_RATEGROUP(1):
     case PWM_SERVO_GET_RATEGROUP(2):
     case PWM_SERVO_GET_RATEGROUP(3):
+	case PWM_SERVO_GET_RATEGROUP(4):
         *(uint32_t *)arg = up_pwm_servo_get_rate_group(cmd - PWM_SERVO_GET_RATEGROUP(0));
         break;
 
     case PWM_SERVO_GET_COUNT:   
     case MIXERIOCGETOUTPUTCOUNT:
-        if (_mode == MODE_4PWM) {
-            *(unsigned *)arg = 4;
-
-        } else {
-            *(unsigned *)arg = 2;
-        }
+        if ((_mode > MODE_NONE) && (_mode < MODE_NPWM))
+            *(unsigned *)arg = _mode;
 
         break;
 
@@ -945,8 +969,8 @@ fc_new_mode(PortMode new_mode)
         break;
 
     case PORT_FULL_PWM:
-        /* select 4-pin PWM mode */
-        servo_mode = TMRFC::MODE_4PWM;
+        /* select 13-pin PWM mode */
+        servo_mode = TMRFC::MODE_13PWM;
         break;
 
     case PORT_GPIO_AND_SERIAL:

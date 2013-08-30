@@ -171,7 +171,8 @@
 #define BOARD_LED2        1
 #define BOARD_LED3        2
 #define BOARD_LED4        3
-#define BOARD_NLEDS       4
+#define BOARD_LED5        4
+#define BOARD_NLEDS       5
 
 #define BOARD_LED_BLUE    BOARD_LED1
 #define BOARD_LED_RED     BOARD_LED2
@@ -182,6 +183,7 @@
 #define BOARD_LED2_BIT    (1 << BOARD_LED2)
 #define BOARD_LED3_BIT    (1 << BOARD_LED3)
 #define BOARD_LED4_BIT    (1 << BOARD_LED4)
+#define BOARD_LED5_BIT    (1 << BOARD_LED5)
 
 /* If CONFIG_ARCH_LEDs is defined, then NuttX will control the 2 LEDs on board the
  * tmrfc-v1.  The following definitions describe how NuttX controls the LEDs:
@@ -296,6 +298,15 @@
  */
 #define HRT_PPM_CHANNEL 1   /* use capture/compare channel 1 */
 #define GPIO_PPM_IN (GPIO_ALT|GPIO_AF1|GPIO_SPEED_50MHz|GPIO_PULLUP|GPIO_PORTA|GPIO_PIN8)
+
+/*
+ * SPI :
+ *
+ */
+#define BITBANG_GPIO_SPI_SCLK  (GPIO_OUTPUT|GPIO_FLOAT|GPIO_SPEED_50MHz|GPIO_PUSHPULL|GPIO_PORTC|GPIO_PIN12)
+#define BITBANG_GPIO_SPI_MISO  (GPIO_INPUT |GPIO_FLOAT|GPIO_SPEED_50MHz|GPIO_PUSHPULL|GPIO_PORTC|GPIO_PIN8)
+#define BITBANG_GPIO_SPI_MOSI  (GPIO_OUTPUT|GPIO_FLOAT|GPIO_SPEED_50MHz|GPIO_PUSHPULL|GPIO_PORTD|GPIO_PIN2)
+#define BITBANG_GPIO_SPI_CS    (GPIO_OUTPUT|GPIO_FLOAT|GPIO_SPEED_50MHz|GPIO_PUSHPULL|GPIO_PORTC|GPIO_PIN11)
 
 /*
  * I2C
@@ -420,6 +431,10 @@ EXTERN void stm32_boardinitialize(void);
 EXTERN void stm32_ledinit(void);
 EXTERN void stm32_setled(int led, bool ledon);
 EXTERN void stm32_setleds(uint8_t ledset);
+#endif
+
+#if defined(CONFIG_SPI_BITBANG) && defined(CONFIG_MMCSD_SPI)
+EXTERN struct spi_dev_s *bitbang_mmcsd_spiinitialize(void);
 #endif
 
 #undef EXTERN
