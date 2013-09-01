@@ -86,8 +86,14 @@ __BEGIN_DECLS
 /*
  * I2C busses
  */
+ 
 #define TMR_I2C_BUS_ONBOARD     2
+
+#if defined(CONFIG_USART1_SERIAL_CONSOLE) /*  I2C1 can not to be used If we are using UART1 as  a console. */
+#define TMR_I2C_BUS_EXPANSION   2
+#else
 #define TMR_I2C_BUS_EXPANSION   1
+#endif
 
 /*
  * Devices on the onboard bus.
