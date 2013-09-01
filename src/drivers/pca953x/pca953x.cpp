@@ -45,39 +45,196 @@
 
 #include <sys/types.h>
 #include <stdint.h>
-#include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <semaphore.h>
+#include <string.h>
 #include <fcntl.h>
-#include <unistd.h>
+#include <poll.h>
+#include <errno.h>
 #include <stdio.h>
-#include <ctype.h>
+#include <math.h>
+#include <unistd.h>
 
+#include <nuttx/arch.h>
 #include <nuttx/wqueue.h>
-
-#include <systemlib/perf_counter.h>
-#include <systemlib/err.h>
-#include <systemlib/systemlib.h>
+#include <nuttx/clock.h>
 
 #include <board_config.h>
 
+#include <systemlib/perf_counter.h>
+#include <systemlib/err.h>
+
 #include <drivers/drv_led.h>
 #include <drivers/drv_gpio.h>
+#include <drivers/drv_hrt.h>
+
+#include <uORB/uORB.h>
+#include <uORB/topics/subsystem_info.h>
+
+#include <float.h>
+
+/* PCA0533 4-bit I2C-bus LED dimmer */
+#define PCA9533_ADDRESS        TMR_I2C_OBDEV_PCA9533
+
+#define PCA9533_REG_START      0x00
+#define PCA9533_REG_INPUT      0x00
+#define PCA9533_REG_PSC0       0x01
+#define PCA9533_REG_PWM0       0x02
+#define PCA9533_REG_PSC1       0x03
+#define PCA9533_REG_PWM1       0x04
+#define PCA9533_REG_LS0        0x05
+
+#define PCA9533_LED_OFF        0x00
+#define PCA9533_LED_ON         0x01
+#define PCA9533_LED_PWM0       0x02
+#define PCA9533_LED_PWM1       0x03
+
+#define PCA9533_AI_FLAG        0x10
+
+#define PCA9533_LED0           0x01
+#define PCA9533_LED1           0x02
+#define PCA9533_LED2           0x04
+#define PCA9533_LED3           0x08
+
+#define LED_BLINK_1HZ          500
+#define LED_BLINK_10HZ         200
+#define LED_BLINK_20HZ         100
+
+#define MIN_MSEC 7 // 7 msec for minimal
+#define MAX_MSEC 1684 // 1684 msec for maximal
+
+typedef struct _pca9533_t
+{
+    uint8_t input ;
+    uint8_t psc0 ;
+    uint8_t pwm0 ;
+    uint8_t psc1 ;
+    uint8_t pwm1 ;
+    
+    union
+    {
+    	uint8_t ls0 ;
+    	struct
+    	{
+    		uint8_t led0 : 2 ;
+        	uint8_t led1 : 2 ;
+        	uint8_t led2 : 2 ;
+        	uint8_t led3 : 2 ;
+    	};
+    }ls0 ;
+}pca9533_t;
+
+/* PCA0536 4-bit I2C-bus and SMBus I/O port */
+#define PCA9536_ADDRESS        TMR_I2C_OBDEV_PCA9536
+
+#define PCA9536_REG_START      0x00
+#define PCA9536_REG_INPUT      0x00
+#define PCA9536_REG_OUTPUT     0x01
+#define PCA9536_REG_POLARITY   0x02
+#define PCA9536_REG_CONFIG     0x03
+
+#define PCA9536_IO0 0x01
+#define PCA9536_IO1 0x02
+#define PCA9536_IO2 0x04
+#define PCA9536_IO3 0x08
+
+#define PCA9536_IO_O 0x00
+#define PCA9536_IO_I 0x01
+
+typedef struct _pca9536_t
+{
+    union
+    {
+    	uint8_t input ;
+    	struct
+    	{
+    		uint8_t ix0 : 1 ;
+    		uint8_t ix1 : 1 ;
+    		uint8_t ix2 : 1 ;
+    		uint8_t ix3 : 1 ;
+    	};
+    }input;
+
+    union
+    {
+    	uint8_t output ;
+    	struct
+    	{
+    		uint8_t ox0 : 1 ;
+    		uint8_t ox1 : 1 ;
+    		uint8_t ox2 : 1 ;
+    		uint8_t ox3 : 1 ;
+    	};
+    }output;
+
+    union
+    {
+    	uint8_t polarity ;
+    	struct
+    	{
+    		uint8_t nx0 : 1 ;
+    		uint8_t nx1 : 1 ;
+    		uint8_t nx2 : 1 ;
+    		uint8_t nx3 : 1 ;
+    	};
+    }polarity;
+
+    union
+    {
+    	uint8_t config ;
+    	struct
+    	{
+    		uint8_t cx0 : 1 ;
+    		uint8_t cx1 : 1 ;
+    		uint8_t cx2 : 1 ;
+    		uint8_t cx3 : 1 ;
+    	};
+    }config;
+}pca9536_t;
+
+typedef struct
+{
+    pca9533_t* pca9533;
+    pca9536_t* pca9536;
+
+}pca_tbl_t;
+
+/* oddly, ERROR is not defined for c++ */
+#ifdef ERROR
+# undef ERROR
+#endif
+static const int ERROR = -1;
+
+#ifndef CONFIG_SCHED_WORKQUEUE
+# error This requires CONFIG_SCHED_WORKQUEUE.
+#endif
 
 class PCA953X : public device::I2C
 {
 public:
-	PCA953X(int bus, int pca953x);
+	PCA953X(int bus);
 	virtual ~PCA953X();
 
 
 	virtual int		init();
-	virtual int		probe();
-	virtual int		info();
 	virtual int		ioctl(struct file *filp, int cmd, unsigned long arg);
+
+	/**
+	 * Diagnostics - print some basic information about the driver.
+	 */
+	void			print_info();
+
+protected:
+	virtual int		probe();
 
 private:
 	work_s			_work;
+
+	pca9533_t pca9533_tbl;
+    pca9536_t pca9536_tbl;
+
+	int			_bus;			/**< the bus the device is connected to */
 
     /**
 	 * Initialise the automatic measurement state machine and start it.
@@ -102,7 +259,206 @@ private:
     uint8_t pca9533_set_pwm(uint8_t pwm, uint32_t duty);
     uint8_t pca9533_set_led(uint8_t led, uint32_t mode);
     uint8_t pca9536_config_io(uint8_t io, uint8_t set);
+
+	/**
+	 * Write a register.
+	 *
+	 * @param reg		The register to write.
+	 * @param val		The value to write.
+	 * @return		OK on write success.
+	 */
+	int			write_reg(uint8_t reg, uint8_t val);
+
+	/**
+	 * Read a register.
+	 *
+	 * @param reg		The register to read.
+	 * @param val		The value read.
+	 * @return		OK on read success.
+	 */
+	int			read_reg(uint8_t reg, uint8_t &val);
+
 };
+
+
+uint8_t
+PCA953X::pca953x_update(uint8_t address)
+{
+    uint8_t rc = false;
+
+    #if 0
+    if(i2c_dev == 0)
+        goto cleanup;
+	#endif
+
+    if(address == PCA9533_ADDRESS)
+    {
+        #if 0
+        if(!i2c_write(i2c_dev->i2c.id, PCA9533_ADDR, PCA9533_REG_START, (u8 *)&pca9533_tbl, sizeof(pca9533_tbl)/sizeof(u8)))
+            goto cleanup;
+		#endif
+    }
+    else if(address == PCA9536_ADDRESS)
+    {
+        #if 0
+        if(!i2c_write(i2c_dev->i2c.id, PCA9536_ADDR, PCA9536_REG_START, (u8 *)&pca9536_tbl, sizeof(pca9536_tbl)/sizeof(u8)))
+            goto cleanup;
+		#endif
+    }
+
+    rc = true;
+
+cleanup:
+    return rc;
+}
+
+uint8_t
+PCA953X::pca9533_set_peroid(uint8_t psc, uint32_t msec)
+{
+    uint8_t rc = 0, data = 0;
+
+    if(msec < MIN_MSEC) // min_msev
+        data = 0;
+
+    if(msec > MAX_MSEC)
+        data = 255;
+
+    data = (uint8_t)((float)msec * 0.152f) - 1;
+
+    if(psc == PCA9533_REG_PSC0)
+    {
+        #if 0
+        if(!i2c_write(i2c_dev->i2c.id, PCA9533_ADDR, PCA9533_REG_PSC0, &data, 0x01))
+            goto cleanup;
+		#endif
+
+        // save old psc0
+        rc = pca9533_tbl.psc0;
+        // update table
+        pca9533_tbl.psc0 = data;
+    }
+    
+    if(psc == PCA9533_REG_PSC1)
+    {
+        #if 0
+        if(!i2c_write(i2c_dev->i2c.id, PCA9533_ADDR, PCA9533_REG_PSC1, &data, 0x01))
+            goto cleanup;
+		#endif
+
+        // save old psc1
+        rc = pca9533_tbl.psc1;
+        // update table
+        pca9533_tbl.psc1 = data;
+    }
+
+cleanup:
+    return rc;
+}
+
+uint8_t
+PCA953X::pca9533_set_pwm(uint8_t pwm, uint32_t duty)
+{
+    uint8_t rc = false, data = 0;
+
+    if(duty < 0)
+        data = 0;
+
+    if(duty > 100)
+        data = 255;
+
+    data = (uint8_t)(((float)duty/100.0f)*256.0f);
+
+    if(pwm == PCA9533_REG_PWM0)
+    {
+        #if 0
+        if(!i2c_write(i2c_dev->i2c.id, PCA9533_ADDR, PCA9533_REG_PWM0, &data, 0x01))
+        goto cleanup;
+		#endif
+
+        // update table
+        pca9533_tbl.pwm0 = data;
+    }
+    
+    if(pwm == PCA9533_REG_PWM1)
+    {
+        #if 0
+        if(!i2c_write(i2c_dev->i2c.id, PCA9533_ADDR, PCA9533_REG_PWM1, &data, 0x01))
+        goto cleanup;
+		#endif
+
+        // update table
+        pca9533_tbl.pwm1 = data;
+    }
+
+    rc = true;
+
+cleanup:
+    return rc;
+}
+
+uint8_t
+PCA953X::pca9533_set_led(uint8_t led, uint32_t mode)
+{
+    uint8_t rc = false;
+
+    if((led & PCA9533_LED0) == PCA9533_LED0)
+        pca9533_tbl.ls0.led0 = mode;
+    if((led & PCA9533_LED1) == PCA9533_LED1)
+        pca9533_tbl.ls0.led1 = mode;
+    if((led & PCA9533_LED2) == PCA9533_LED2)
+        pca9533_tbl.ls0.led2 = mode;
+    if((led & PCA9533_LED3) == PCA9533_LED3)
+        pca9533_tbl.ls0.led3 = mode;
+
+    #if 0
+    if(!i2c_write(i2c_dev->i2c.id, PCA9533_ADDR, PCA9533_REG_LS0, (u8*)&(pca9533_tbl.ls0), 0x01))
+        goto cleanup;
+	#endif
+
+    rc = true;
+
+cleanup:
+    return rc;
+}
+
+uint8_t
+PCA953X::pca9536_config_io(uint8_t io, uint8_t set)
+{
+    uint8_t rc = false;
+
+    if((io & PCA9536_IO0) == PCA9536_IO0)
+        pca9536_tbl.config.cx0 = set;
+    if((io & PCA9536_IO1) == PCA9536_IO1)
+        pca9536_tbl.config.cx1 = set;
+    if((io & PCA9536_IO2) == PCA9536_IO2)
+        pca9536_tbl.config.cx2 = set;
+    if((io & PCA9536_IO3) == PCA9536_IO3)
+        pca9536_tbl.config.cx3 = set;
+
+    #if 0
+    if(!i2c_write(i2c_dev->i2c.id, PCA9536_ADDR, PCA9536_REG_CONFIG, (u8*)&(pca9536_tbl.config), 0x01))
+        goto cleanup;
+	#endif
+
+    rc = true;
+
+cleanup:
+    return rc;
+}
+
+int
+PCA953X::write_reg(uint8_t reg, uint8_t val)
+{
+	uint8_t cmd[] = { reg, val };
+
+	return transfer(&cmd[0], 2, nullptr, 0);
+}
+
+int
+PCA953X::read_reg(uint8_t reg, uint8_t &val)
+{
+	return transfer(&reg, 1, &val, 1);
+}
 
 /* for now, we only support one PCA953X */
 namespace
@@ -113,9 +469,13 @@ namespace
 
 extern "C" __EXPORT int pca953x_main(int argc, char *argv[]);
 
-PCA953X::PCA953X(int bus, int pca953x) :
-	I2C("pca953x", PCA953X_DEVICE_PATH, bus, pca953x, 100000)
+PCA953X::PCA953X(int bus) :
+	I2C("PCA953X", PCA953X_DEVICE_PATH, bus, PCA9533_ADDRESS, 400000),
+	_bus(bus)
 {
+    // enable debug() calls
+	_debug_enabled = false;
+
 	memset(&_work, 0, sizeof(_work));
 }
 
@@ -126,41 +486,23 @@ PCA953X::~PCA953X()
 int
 PCA953X::init()
 {
-	int ret;
-	ret = I2C::init();
+    int ret = ERROR;
 
-	if (ret != OK) {
-		return ret;
-	}
+	/* do I2C init (and probe) first */
+	if (I2C::init() != OK)
+		goto out;
 
-	return OK;
+	ret = OK;
+
+out:
+	return ret;
 }
 
 int
 PCA953X::probe()
 {
-	int ret = true;
-
-	return ret;
-}
-
-int
-PCA953X::info()
-{
-	int ret;
-
-	if (ret == OK) {
-		/* we don't care about power-save mode */
-		#if 0
-		log("state: %s", on ? "ON" : "OFF");
-		log("red: %u, green: %u, blue: %u", (unsigned)r, (unsigned)g, (unsigned)b);
-		#endif
-		;
-	} else {
-		warnx("failed to read pca953x");
-	}
-
-	return ret;
+    // Assume the device is too stupid to be discoverable.
+	return OK;
 }
 
 int
@@ -176,126 +518,175 @@ PCA953X::ioctl(struct file *filp, int cmd, unsigned long arg)
 	return ret;
 }
 
-void pca953x_usage();
+void
+PCA953X::start()
+{
 
-
-void pca953x_usage() {
-	errx(0, "missing command: try 'start', 'stop', 'test', 'info'");
 }
+
+void
+PCA953X::stop()
+{
+
+}
+
+int
+PCA953X::reset()
+{
+	return OK;
+}
+
+void
+PCA953X::print_info()
+{
+	int ret;
+
+	if (ret == OK) {
+		/* we don't care about power-save mode */
+		#if 0
+		log("state: %s", on ? "ON" : "OFF");
+		log("red: %u, green: %u, blue: %u", (unsigned)r, (unsigned)g, (unsigned)b);
+		#endif
+		;
+	} else {
+		warnx("failed to read pca953x");
+	}
+}
+
+/**
+ * Local functions in support of the shell command.
+ */
+namespace pca953x
+{
+
+/* oddly, ERROR is not defined for c++ */
+#ifdef ERROR
+# undef ERROR
+#endif
+const int ERROR = -1;
+
+PCA953X	*g_dev;
+
+void	start();
+void	test();
+void	reset();
+void	info();
+
+/**
+ * Start the driver.
+ */
+void
+start()
+{
+	int fd;
+
+	if (g_dev != nullptr)
+		/* if already started, the still command succeeded */
+		errx(0, "already started");
+
+	/* create the driver, attempt expansion bus first */
+	g_dev = new PCA953X(TMR_I2C_BUS_EXPANSION);
+
+	if (g_dev != nullptr && OK != g_dev->init()) {
+		delete g_dev;
+		g_dev = nullptr;
+	}
+
+	/* if this failed, attempt onboard sensor */
+	if (g_dev == nullptr) {
+		g_dev = new PCA953X(TMR_I2C_BUS_ONBOARD);
+		if (g_dev != nullptr && OK != g_dev->init()) {
+			goto fail;
+		}
+	}
+
+	if (g_dev == nullptr)
+		goto fail;
+
+	/* set the poll rate to default, starts automatic data collection */
+	fd = open(PCA953X_DEVICE_PATH, O_RDONLY);
+
+	exit(0);
+
+fail:
+
+	if (g_dev != nullptr) {
+		delete g_dev;
+		g_dev = nullptr;
+	}
+
+	errx(1, "driver start failed");
+}
+
+/**
+ * Perform some basic functional tests on the driver;
+ * make sure we can collect data from the sensor in polled
+ * and automatic modes.
+ */
+void
+test()
+{
+	errx(0, "test()");
+}
+
+/**
+ * Reset the driver.
+ */
+void
+reset()
+{
+	int fd = open(PCA953X_DEVICE_PATH, O_RDONLY);
+
+	if (fd < 0)
+		err(1, "failed ");
+
+	exit(0);
+}
+
+/**
+ * Print a little info about the driver.
+ */
+void
+info()
+{
+	if (g_dev == nullptr)
+		errx(1, "driver not running");
+
+	g_dev->print_info();
+
+	exit(0);
+}
+
+} // namespace
+
 
 int
 pca953x_main(int argc, char *argv[])
 {
-	int i2cdevice = -1;
-	int pca953xadr = 0;
-	int ch;
+	/*
+	 * Start/load the driver.
+	 */
+	if (!strcmp(argv[1], "start"))
+		pca953x::start();
 
-	/* jump over start/off/etc and look at options first */
-	while ((ch = getopt(argc-1, &argv[1], "a:b:")) != EOF) {
-		switch (ch) {
-		case 'a':
-			pca953xadr = strtol(optarg, NULL, 0);
-			break;
-		case 'b':
-			i2cdevice = strtol(optarg, NULL, 0);
-			break;
-		default:
-			pca953x_usage();
-		}
-	}
+	/*
+	 * Test the driver/device.
+	 */
+	if (!strcmp(argv[1], "test"))
+		pca953x::test();
 
-	const char *verb = argv[1];
+	/*
+	 * Reset the driver.
+	 */
+	if (!strcmp(argv[1], "reset"))
+		pca953x::reset();
 
-	int fd;
-	int ret;
+	/*
+	 * Print driver information.
+	 */
+	if (!strcmp(argv[1], "info") || !strcmp(argv[1], "status"))
+		pca953x::info();
 
-	if (!strcmp(verb, "start")) {
-		if (g_pca953x != nullptr)
-			errx(1, "already started");
+    errx(1, "unrecognized command, try 'start', 'test', 'reset' or 'info'");
 
-		if (i2cdevice == -1) {
-			// try the external bus first
-			i2cdevice = TMR_I2C_BUS_EXPANSION;
-			g_pca953x = new PCA953X(TMR_I2C_BUS_EXPANSION, pca953xadr);
-			if (g_pca953x != nullptr && OK != g_pca953x->init()) {
-				delete g_pca953x;
-				g_pca953x = nullptr;
-			}
-			if (g_pca953x == nullptr) {
-				// fall back to default bus
-				i2cdevice = TMR_I2C_BUS_ONBOARD;
-			}
-		}
-		if (g_pca953x == nullptr) {
-			g_pca953x = new PCA953X(i2cdevice, pca953xadr);
-			if (g_pca953x == nullptr)
-				errx(1, "new failed");
-
-			if (OK != g_pca953x->init()) {
-				delete g_pca953x;
-				g_pca953x = nullptr;
-				errx(1, "init failed");
-			}
-		}
-
-		exit(0);
-	}
-
-	/* need the driver past this point */
-	if (g_pca953x == nullptr) {
-	    warnx("not started");
-	    pca953x_usage();
-	    exit(0);
-	}
-
-	if (!strcmp(verb, "test")) {
-		fd = open(PCA953X_DEVICE_PATH, 0);
-		if (fd == -1) {
-			errx(1, "Unable to open " PCA953X_DEVICE_PATH);
-		}
-
-        #if 0
-		ret = ioctl(fd, PCA953X_SET_PATTERN, (unsigned long)&pattern);
-		#endif
-
-		close(fd);
-		exit(ret);
-	}
-
-	if (!strcmp(verb, "info")) {
-		g_pca953x->info();
-		exit(0);
-	}
-
-    #if 0
-	if (!strcmp(verb, "stop") || !strcmp(verb, "off")) {
-		/* although technically it doesn't stop, this is the excepted syntax */
-		fd = open(PCA953X_DEVICE_PATH, 0);
-		if (fd == -1) {
-			errx(1, "Unable to open " PCA953X_DEVICE_PATH);
-		}
-		ret = ioctl(fd, PCA953X_SET_MODE, (unsigned long)PCA953X_MODE_OFF);
-		close(fd);
-		exit(ret);
-	}
-
-	if (!strcmp(verb, "rgb")) {
-		fd = open(PCA953X_DEVICE_PATH, 0);
-		if (fd == -1) {
-			errx(1, "Unable to open " PCA953X_DEVICE_PATH);
-		}
-		if (argc < 5) {
-			errx(1, "Usage: pca953x rgb <red> <green> <blue>");
-		}
-		pca953x_rgbset_t v;
-		v.red   = strtol(argv[1], NULL, 0);
-		v.green = strtol(argv[2], NULL, 0);
-		v.blue  = strtol(argv[3], NULL, 0);
-		ret = ioctl(fd, PCA953X_SET_RGB, (unsigned long)&v);
-		close(fd);
-		exit(ret);
-	}
-	#endif
-
-	pca953x_usage();
 }

@@ -45,7 +45,7 @@
 #define LED_DEVICE_PATH		"/dev/led"
 
 #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
-#define PCA953X_DEVICE_PATH "/dev/pca953x"
+#define PCA953X_DEVICE_PATH "/dev/pca"
 #endif
 
 #define _LED_BASE		0x2800
