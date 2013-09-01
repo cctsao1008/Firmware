@@ -73,7 +73,6 @@ public:
 
     virtual int     init();
     virtual int     probe();
-    virtual int     info();
     virtual int     ioctl(struct file *filp, int cmd, unsigned long arg);
 
 private:
@@ -111,7 +110,7 @@ namespace dummy
     void
     start()
     {
-        exit(0);
+        errx(1, "start()");
     }
 
     /**
@@ -122,7 +121,7 @@ namespace dummy
     void
     test()
     {
-        exit(0);
+        errx(1, "test()");
     }
 
     /**
@@ -131,7 +130,7 @@ namespace dummy
     void
     reset()
     {
-        exit(0);
+        errx(1, "reset()");
     }
 
     /**
@@ -140,7 +139,7 @@ namespace dummy
     void
     info()
     {
-        exit(0);
+        errx(1, "info()");
     }
 }
 
@@ -173,20 +172,6 @@ int
 DUMMY::probe()
 {
     int ret = true;
-
-    return ret;
-}
-
-int
-DUMMY::info()
-{
-    int ret;
-
-    if (ret == OK) {
-        warnx("succeed to read dummy");
-    } else {
-        warnx("failed to read dummy");
-    }
 
     return ret;
 }
