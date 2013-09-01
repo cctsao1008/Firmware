@@ -111,11 +111,8 @@ pwm_timer_init(unsigned timer)
 	rCCER(timer) = 0;
 	rDCR(timer) = 0;
 
-	if ((pwm_timers[timer].base == STM32_TIM2_BASE) || 
-	    (pwm_timers[timer].base == STM32_TIM3_BASE) || 
-	    (pwm_timers[timer].base == STM32_TIM4_BASE) ||
-	    (pwm_timers[timer].base == STM32_TIM5_BASE) || 
-	    (pwm_timers[timer].base == STM32_TIM8_BASE)) {
+	if ((pwm_timers[timer].base == STM32_TIM1_BASE) || (pwm_timers[timer].base == STM32_TIM8_BASE)) 
+	{
 		/* master output enable = on */
 		rBDTR(timer) = ATIM_BDTR_MOE;
 	}
@@ -152,18 +149,33 @@ pwm_channel_init(unsigned channel)
 	case 1:
 		rCCMR1(timer) |= (GTIM_CCMR_MODE_PWM1 << GTIM_CCMR1_OC1M_SHIFT) | GTIM_CCMR1_OC1PE;
 		rCCR1(timer) = pwm_channels[channel].default_value;
+		#if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+        if(channel == 12)
+            rCCER(timer) |= GTIM_CCER_CC1NE; /* complementary output enable */
+        else
+		#endif
 		rCCER(timer) |= GTIM_CCER_CC1E;
 		break;
 
 	case 2:
 		rCCMR1(timer) |= (GTIM_CCMR_MODE_PWM1 << GTIM_CCMR1_OC2M_SHIFT) | GTIM_CCMR1_OC2PE;
 		rCCR2(timer) = pwm_channels[channel].default_value;
+		#if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+        if(channel == 6)
+            rCCER(timer) |= GTIM_CCER_CC2NE;  /* complementary output enable */
+        else
+		#endif
 		rCCER(timer) |= GTIM_CCER_CC2E;
 		break;
 
 	case 3:
 		rCCMR2(timer) |= (GTIM_CCMR_MODE_PWM1 << GTIM_CCMR2_OC3M_SHIFT) | GTIM_CCMR2_OC3PE;
 		rCCR3(timer) = pwm_channels[channel].default_value;
+		#if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+        if(channel == 7)
+            rCCER(timer) |= GTIM_CCER_CC3NE;  /* complementary output enable */
+        else
+		#endif
 		rCCER(timer) |= GTIM_CCER_CC3E;
 		break;
 
