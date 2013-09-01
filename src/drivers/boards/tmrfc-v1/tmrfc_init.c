@@ -58,7 +58,7 @@
 #include <nuttx/analog/adc.h>
 
 #include "stm32.h"
-#include "internal.h"
+#include "board_config.h"
 #include "stm32_uart.h"
 
 #include <arch/board/board.h>
@@ -208,36 +208,36 @@ __EXPORT int nsh_archinitialize(void)
     #if defined(CONFIG_SPI_BITBANG) && defined(CONFIG_MMCSD_SPI)  /* Use SPI to access Micro SD card  */
     
     /* Get the SPI driver instance for the SD chip select */
-    message("[boot] Initializing bit bang SPI for the MMC/SD slot\n");
+    message("[boot] Initializing soft SPI for the MMC/SD slot\n");
 
-    spi = bitbang_mmcsd_spiinitialize();
+    spi = spi_initialize();
 
     if (!spi)
     {
-        message("[boot] Failed to bit bang SPI for the MMC/SD slot\n");
+        message("[boot] Failed to initialize soft SPI\n");
             return -ENODEV;
     }
     else
     {
-        message("[boot] Successfully initialized bit bang SPI for the MMC/SD slot\n");
-        message("[boot] Set SPI ferquency to 25000000Hz\n");
-        SPI_SETFREQUENCY(spi, 25000000);
+        message("[boot] Successfully initialized soft SPI for the MMC/SD slot\n");
+        //message("[boot] Set SPI ferquency to 25000000Hz\n");
+        //SPI_SETFREQUENCY(spi, 25000000);
     }
 
     /* Bind the SPI device for the chip select to the slot */
 
-    message("[boot] Binding bit bang SPI device to MMC/SD slot %d\n",
+    message("[boot] Binding soft SPI device to MMC/SD slot %d\n",
         CONFIG_NSH_MMCSDSLOTNO);
 
     result = mmcsd_spislotinitialize(CONFIG_NSH_MMCSDMINOR, CONFIG_NSH_MMCSDSLOTNO, spi);
     if (result < 0)
     {
-        message("[boot] Failed to bind  bit bang SPI device to MMC/SD slot %d: %d\n",
+        message("[boot] Failed to bind soft SPI device to MMC/SD slot %d: %d\n",
             CONFIG_NSH_MMCSDSLOTNO, result);
         return result;
     }
 
-    message("[boot] Successfuly bound  bit bang SPI device to MMC/SD slot %d\n",
+    message("[boot] Successfuly bound Soft SPI device to MMC/SD slot %d\n",
         CONFIG_NSH_MMCSDSLOTNO);
         
     #else  /* Use SDIO to access Micro SD card  */

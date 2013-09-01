@@ -861,6 +861,13 @@ Sensors::accel_init()
 
 		/* set the driver to poll at 800Hz */
 		ioctl(fd, SENSORIOCSPOLLRATE, 800);
+		#elif CONFIG_ARCH_BOARD_TMRFC_V1
+
+		/* set the accel internal sampling rate up to at leat 800Hz */
+		ioctl(fd, ACCELIOCSSAMPLERATE, 800);
+
+		/* set the driver to poll at 800Hz */
+		ioctl(fd, SENSORIOCSPOLLRATE, 800);
 
 		#else
 			#error Need a board configuration, either CONFIG_ARCH_BOARD_PX4FMU_V1 or CONFIG_ARCH_BOARD_PX4FMU_V2

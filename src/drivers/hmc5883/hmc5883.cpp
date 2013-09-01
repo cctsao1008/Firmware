@@ -688,11 +688,19 @@ HMC5883::ioctl(struct file *filp, int cmd, unsigned long arg)
 	case MAGIOCSELFTEST:
 		return check_calibration();
 
+    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+	case MAGIOCGEXTERNAL:
+		if (_bus == TMR_I2C_BUS_EXPANSION)
+			return 1;
+		else
+			return 0;
+	#else
 	case MAGIOCGEXTERNAL:
 		if (_bus == PX4_I2C_BUS_EXPANSION)
 			return 1;
 		else
 			return 0;
+    #endif
 
 	default:
 		/* give it to the superclass */
@@ -1272,7 +1280,7 @@ start()
 		g_dev = nullptr;
 	}
 
-#if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
 
     #ifdef TMR_I2C_BUS_ONBOARD
 	/* if this failed, attempt onboard sensor */
@@ -1284,7 +1292,7 @@ start()
 	}
     #endif
 
-#else
+    #else
 
     #ifdef PX4_I2C_BUS_ONBOARD
 	/* if this failed, attempt onboard sensor */
@@ -1296,7 +1304,7 @@ start()
 	}
     #endif
 
-#endif
+    #endif
 
 
 	if (g_dev == nullptr)

@@ -53,7 +53,7 @@
 #include "up_arch.h"
 #include "chip.h"
 #include "stm32.h"
-#include "internal.h"
+#include "board_config.h"
 
 /************************************************************************************
  * Public Functions

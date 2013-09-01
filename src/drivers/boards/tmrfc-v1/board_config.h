@@ -32,7 +32,7 @@
  ****************************************************************************/
 
 /**
- * @file internal.h
+ * @file board_config.h
  *
  * TMRFC internal definitions
  */
@@ -51,7 +51,7 @@ __BEGIN_DECLS
 
 /* these headers are not C++ safe */
 #include <stm32.h>
-
+#include <arch/board/board.h>
  
 /****************************************************************************************************
  * Definitions
@@ -73,8 +73,8 @@ __BEGIN_DECLS
 #define GPIO_LED2       (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_50MHz|GPIO_OUTPUT_CLEAR|GPIO_PORTB|GPIO_PIN14)
 
 /* External interrupts */
-#define GPIO_EXTI_COMPASS   (GPIO_INPUT|GPIO_FLOAT|GPIO_EXTI|GPIO_PORTB|GPIO_PIN1)
-// XXX MPU6000 DRDY?
+#define GPIO_EXTI_COMPASS   (GPIO_INPUT|GPIO_FLOAT|GPIO_EXTI|GPIO_PORTC|GPIO_PIN3)
+// MPU6050 DRDY?
 
 /* SPI chip selects */
 
@@ -82,6 +82,24 @@ __BEGIN_DECLS
 #define GPIO_SPI_CS_ACCEL   (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTC|GPIO_PIN15)
 #define GPIO_SPI_CS_MPU     (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTB|GPIO_PIN0)
 #define GPIO_SPI_CS_SDCARD  (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTA|GPIO_PIN4)
+
+/*
+ * I2C busses
+ */
+#define TMR_I2C_BUS_ONBOARD     2
+#define TMR_I2C_BUS_EXPANSION   1
+
+/*
+ * Devices on the onboard bus.
+ *
+ * Note that these are unshifted addresses.
+ */
+#define TMR_I2C_OBDEV_HMC5883   0x1e
+#define TMR_I2C_OBDEV_MS5611    0x77
+#define TMR_I2C_OBDEV_PCA9536   0x41
+#define TMR_I2C_OBDEV_PCA9533   0x62
+
+#define TMR_I2C_OBDEV_EEPROM    NOTDEFINED
 
 /* User GPIOs
  *
@@ -107,6 +125,36 @@ __BEGIN_DECLS
 #define GPIO_GPIO7_OUTPUT   (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_CLEAR|GPIO_PORTB|GPIO_PIN12)
 #define GPIO_GPIO_DIR       (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_CLEAR|GPIO_PORTC|GPIO_PIN13)
 
+
+/*
+ * PWM
+ *
+ * Four PWM outputs can be configured on pins otherwise shared with
+ * USART2; two can take the flow control pins if they are not being used.
+ *
+ * Pins:
+ *
+ * CTS - PA0 - TIM2CH1
+ * RTS - PA1 - TIM2CH2
+ * TX  - PA2 - TIM2CH3
+ * RX  - PA3 - TIM2CH4
+ *
+ */
+#define GPIO_TIM3_CH1OUT    GPIO_TIM3_CH1OUT_1 // PWM OUT CH1
+#define GPIO_TIM3_CH2OUT    GPIO_TIM3_CH2OUT_1
+#define GPIO_TIM3_CH3OUT    GPIO_TIM3_CH3OUT_1
+#define GPIO_TIM3_CH4OUT    GPIO_TIM3_CH4OUT_1
+#define GPIO_TIM4_CH3OUT    GPIO_TIM4_CH3OUT_1
+#define GPIO_TIM4_CH4OUT    GPIO_TIM4_CH4OUT_1
+#define GPIO_TIM8_CH2OUT    GPIO_TIM8_CH2N_2
+#define GPIO_TIM8_CH3OUT    GPIO_TIM8_CH3N_2
+
+#define GPIO_TIM5_CH1OUT    GPIO_TIM5_CH1OUT_1
+#define GPIO_TIM5_CH4OUT    GPIO_TIM5_CH4OUT_1
+#define GPIO_TIM5_CH3OUT    GPIO_TIM5_CH3OUT_1
+#define GPIO_TIM2_CH1OUT    GPIO_TIM2_CH1OUT_2
+#define GPIO_TIM8_CH1OUT    GPIO_TIM8_CH1N_1
+
 /* USB OTG FS
  *
  * PA9  OTG_FS_VBUS VBUS sensing (also connected to the green LED)
@@ -120,25 +168,12 @@ __BEGIN_DECLS
 #  define GPIO_OTGFS_OVER  (GPIO_INPUT|GPIO_FLOAT|GPIO_SPEED_100MHz|GPIO_PUSHPULL|GPIO_PORTB|GPIO_PIN2)
 #endif
 
-/* PWM
- *
- * The TMRFC has five PWM outputs, of which only the output on
- * pin PC8 is fixed assigned to this function. The other four possible
- * pwm sources are the TX, RX, RTS and CTS pins of USART2
- *
- * Alternate function mapping:
- * PC8 - BUZZER - TIM8_CH3/SDIO_D0 /TIM3_CH3/ USART6_CK / DCMI_D2
+/* High-resolution timer
  */
-
-#ifdef CONFIG_PWM
-#  if defined(CONFIG_STM32_TIM3_PWM)
-#    define BUZZER_PWMCHANNEL 3
-#    define BUZZER_PWMTIMER 3
-#  elif defined(CONFIG_STM32_TIM8_PWM)
-#    define BUZZER_PWMCHANNEL 3
-#    define BUZZER_PWMTIMER 8
-#  endif
-#endif
+#define HRT_TIMER		1	/* use timer1 for the HRT */
+#define HRT_TIMER_CHANNEL	1	/* use capture/compare channel */
+#define HRT_PPM_CHANNEL		3	/* use capture/compare channel 3 */
+#define GPIO_PPM_IN		(GPIO_ALT|GPIO_AF1|GPIO_SPEED_50MHz|GPIO_PULLUP|GPIO_PORTA|GPIO_PIN10)
 
 /****************************************************************************************************
  * Public Types

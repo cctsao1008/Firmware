@@ -55,7 +55,7 @@
  ************************************************************************************/
 
 /* Clocking *************************************************************************/
-/* The TMRFC uses a 24MHz crystal connected to the HSE.
+/* The TMRFC uses a 8MHz crystal connected to the HSE.
  *
  * This is the canonical configuration:
  *   System Clock source           : PLL (HSE)
@@ -154,11 +154,6 @@
 
 #define STM32_TIM18_FREQUENCY   (2*STM32_PCLK2_FREQUENCY)
 #define STM32_TIM27_FREQUENCY   (2*STM32_PCLK1_FREQUENCY)
-
-/* High-resolution timer
- */
-#define HRT_TIMER       1   /* use timer1 for the HRT */
-#define HRT_TIMER_CHANNEL   1   /* use capture/compare channel */
 
 /* LED definitions ******************************************************************/
 /* If CONFIG_ARCH_LEDS is not defined, then the user can control the LEDs in any
@@ -268,45 +263,13 @@
 #define DMAMAP_USART6_RX DMAMAP_USART6_RX_2
 
 /*
- * PWM
- *
- * Eight PWM outputs can be configured on pins otherwise shared with
- * USART4; one can take the flow control pins if they are not being used.
- *
- * Pins:
- *
- */
-#define GPIO_TIM3_CH1OUT    GPIO_TIM3_CH1OUT_1 // PWM OUT CH1
-#define GPIO_TIM3_CH2OUT    GPIO_TIM3_CH2OUT_1
-#define GPIO_TIM3_CH3OUT    GPIO_TIM3_CH3OUT_1
-#define GPIO_TIM3_CH4OUT    GPIO_TIM3_CH4OUT_1
-#define GPIO_TIM4_CH3OUT    GPIO_TIM4_CH3OUT_1
-#define GPIO_TIM4_CH4OUT    GPIO_TIM4_CH4OUT_1
-#define GPIO_TIM8_CH2OUT    GPIO_TIM8_CH2N_2
-#define GPIO_TIM8_CH3OUT    GPIO_TIM8_CH3N_2
-
-#define GPIO_TIM5_CH1OUT    GPIO_TIM5_CH1OUT_1
-#define GPIO_TIM5_CH4OUT    GPIO_TIM5_CH4OUT_1
-#define GPIO_TIM5_CH3OUT    GPIO_TIM5_CH3OUT_1
-#define GPIO_TIM2_CH1OUT    GPIO_TIM2_CH1OUT_2
-#define GPIO_TIM8_CH1OUT    GPIO_TIM8_CH1N_1
-
-/*
- * PPM :
- *
- * PPM input is handled by the HRT timer.
- */
-#define HRT_PPM_CHANNEL 1   /* use capture/compare channel 1 */
-#define GPIO_PPM_IN (GPIO_ALT|GPIO_AF1|GPIO_SPEED_50MHz|GPIO_PULLUP|GPIO_PORTA|GPIO_PIN8)
-
-/*
  * SPI :
  *
  */
-#define BITBANG_GPIO_SPI_SCLK  (GPIO_OUTPUT|GPIO_FLOAT|GPIO_SPEED_50MHz|GPIO_PUSHPULL|GPIO_PORTC|GPIO_PIN12)
-#define BITBANG_GPIO_SPI_MISO  (GPIO_INPUT |GPIO_FLOAT|GPIO_SPEED_50MHz|GPIO_PUSHPULL|GPIO_PORTC|GPIO_PIN8)
-#define BITBANG_GPIO_SPI_MOSI  (GPIO_OUTPUT|GPIO_FLOAT|GPIO_SPEED_50MHz|GPIO_PUSHPULL|GPIO_PORTD|GPIO_PIN2)
-#define BITBANG_GPIO_SPI_CS    (GPIO_OUTPUT|GPIO_FLOAT|GPIO_SPEED_50MHz|GPIO_PUSHPULL|GPIO_PORTC|GPIO_PIN11)
+#define BITBANG_GPIO_SPI_SCLK  (GPIO_OUTPUT|GPIO_PULLDOWN|GPIO_SPEED_50MHz|GPIO_PUSHPULL|GPIO_PORTC|GPIO_PIN12)
+#define BITBANG_GPIO_SPI_MISO  (GPIO_INPUT |GPIO_PULLUP|GPIO_SPEED_50MHz|GPIO_PUSHPULL|GPIO_PORTC|GPIO_PIN8)
+#define BITBANG_GPIO_SPI_MOSI  (GPIO_OUTPUT|GPIO_PULLUP|GPIO_SPEED_50MHz|GPIO_PUSHPULL|GPIO_PORTD|GPIO_PIN2)
+#define BITBANG_GPIO_SPI_CS    (GPIO_OUTPUT|GPIO_PULLUP|GPIO_SPEED_50MHz|GPIO_PUSHPULL|GPIO_PORTC|GPIO_PIN11)
 
 /*
  * I2C
@@ -325,22 +288,6 @@
 #define GPIO_I2C2_SCL_GPIO  (GPIO_OUTPUT|GPIO_OPENDRAIN|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTB|GPIO_PIN10)
 #define GPIO_I2C2_SDA_GPIO  (GPIO_OUTPUT|GPIO_OPENDRAIN|GPIO_SPEED_50MHz|GPIO_OUTPUT_SET|GPIO_PORTB|GPIO_PIN11)
 
-/*
- * I2C busses
- */
-#define TMR_I2C_BUS_ONBOARD 2
-#define TMR_I2C_BUS_EXPANSION   1
-
-/*
- * Devices on the onboard bus.
- *
- * Note that these are unshifted addresses.
- */
-#define TMR_I2C_OBDEV_HMC5883   0x1e
-#define TMR_I2C_OBDEV_MS5611    0x76
-#define TMR_I2C_OBDEV_PCA9536   0x41
-#define TMR_I2C_OBDEV_PCA9533   0x62
-#define TMR_I2C_OBDEV_EEPROM    NOTDEFINED
 
 /*
  * SPI
@@ -360,33 +307,6 @@
    disable it for SPI1. */
 #define DMACHAN_SPI1_RX DMAMAP_SPI1_RX_1
 #define DMACHAN_SPI1_TX DMAMAP_SPI1_TX_2
-
-/*
- * Use these in place of the spi_dev_e enumeration to
- * select a specific SPI device on SPI1
- */
-#if 0
-#define TMR_SPIDEV_GYRO     1
-#define TMR_SPIDEV_ACCEL    2
-#define TMR_SPIDEV_MPU      3
-#endif
-
-/*
- * Optional devices on IO's external port
- */
-#if 0
-#define TMR_SPIDEV_ACCEL_MAG 2
-#endif
-
-/*
- * Tone alarm output : "Will change to use timer pin in next TMR V2, No support tone alarm on TMR V1, 2013/08/13 "
- */
-#if 0
-#define TONE_ALARM_TIMER    3   /* timer 3 */
-#define TONE_ALARM_CHANNEL  3   /* channel 3 */
-#define GPIO_TONE_ALARM_IDLE    (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_CLEAR|GPIO_PORTC|GPIO_PIN8)
-#define GPIO_TONE_ALARM     (GPIO_ALT|GPIO_AF2|GPIO_SPEED_2MHz|GPIO_FLOAT|GPIO_PUSHPULL|GPIO_PORTC|GPIO_PIN8)
-#endif
 
 /************************************************************************************
  * Public Data
@@ -434,7 +354,7 @@ EXTERN void stm32_setleds(uint8_t ledset);
 #endif
 
 #if defined(CONFIG_SPI_BITBANG) && defined(CONFIG_MMCSD_SPI)
-EXTERN struct spi_dev_s *bitbang_mmcsd_spiinitialize(void);
+EXTERN FAR struct spi_dev_s *spi_initialize(void);
 #endif
 
 #undef EXTERN

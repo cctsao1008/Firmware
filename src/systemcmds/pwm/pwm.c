@@ -230,7 +230,7 @@ pwm_main(int argc, char *argv[])
 
 			ret = ioctl(fd, PWM_SERVO_GET(i), (unsigned long)&spos);
 			if (ret == OK) {
-				printf("channel %u: %uus\n", i, spos);
+				printf("Channel %-2u: %-4uus\n", i, spos);
 			} else {
 				printf("%u: ERROR\n", i);
 			}
@@ -243,11 +243,12 @@ pwm_main(int argc, char *argv[])
 			ret = ioctl(fd, PWM_SERVO_GET_RATEGROUP(i), (unsigned long)&group_mask);
 			if (ret != OK)
 				break;
+		    printf("\n");
 			if (group_mask != 0) {
-				printf("channel group %u: channels", i);
+				printf("Channel Group %-2u: Channels", i);
 				for (unsigned j = 0; j < 32; j++)
 					if (group_mask & (1 << j))
-						printf(" %u", j);
+						printf("  %-2u", j);
 				printf("\n");
 			}
 		}

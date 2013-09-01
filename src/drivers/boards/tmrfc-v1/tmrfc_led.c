@@ -42,7 +42,7 @@
 #include <stdbool.h>
 
 #include "stm32.h"
-#include "internal.h"
+#include "board_config.h"
 
 #include <arch/board/board.h>
 
@@ -57,6 +57,7 @@ __BEGIN_DECLS
 extern void led_init();
 extern void led_on(int led);
 extern void led_off(int led);
+extern void led_toggle(int led);
 __END_DECLS
 
 __EXPORT void led_init()
@@ -97,16 +98,37 @@ __EXPORT void led_off(int led)
     
     if (led == 1)
     {
-    
-    }
-    
-    if (led == 2)
+	}
+	
+	if (led == 2)
     {
-    
+
     }
     
     if (led == 3)
     {
+
+    }
+}
     
+__EXPORT void led_toggle(int led)
+{
+	if (led == 0)
+	{
+    
+	}
+	if (led == 1)
+	{
+    
+	}
+	
+	if (led == 2)
+    {
+
+    }
+    
+    if (led == 3)
+    {
+
     }
 }

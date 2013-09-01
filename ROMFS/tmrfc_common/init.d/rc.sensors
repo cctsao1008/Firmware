@@ -21,10 +21,10 @@ if mpu6050 start
 then
 	echo "using MPU6050, HMC5883L"
 	hmc5883 start
+	echo "using MS5611"
+	ms5611 start
 else
 	echo "Failed to start MPU6050"
-ms5611 start
-
 fi
 
 #
@@ -35,8 +35,5 @@ fi
 #
 if sensors start
 then
-	#
-	# Check sensors - run AFTER 'sensors start'
-	#
 	preflight_check &
 fi

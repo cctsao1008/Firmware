@@ -57,8 +57,9 @@
 #include <drivers/device/device.h>
 #include <drivers/drv_pwm_output.h>
 #include <drivers/drv_gpio.h>
-#include <drivers/boards/tmrfc/internal.h>
 #include <drivers/drv_hrt.h>
+
+# include <board_config.h>
 
 #include <systemlib/systemlib.h>
 #include <systemlib/err.h>
@@ -69,9 +70,12 @@
 #include <uORB/topics/actuator_controls.h>
 #include <uORB/topics/actuator_controls_effective.h>
 #include <uORB/topics/actuator_outputs.h>
+#include <uORB/topics/actuator_armed.h>
 
 #include <systemlib/err.h>
-#include <systemlib/ppm_decode.h>
+#ifdef HRT_PPM_CHANNEL
+# include <systemlib/ppm_decode.h>
+#endif
 
 class TMRFC : public device::CDev
 {
@@ -116,7 +120,7 @@ private:
     unsigned    _current_update_rate;
     int     _task;
     int     _t_actuators;
-    int     _t_armed;
+	int		_t_actuator_armed;
     orb_advert_t    _t_outputs;
     orb_advert_t    _t_actuators_effective;
     unsigned    _num_outputs;
@@ -188,7 +192,7 @@ TMRFC::TMRFC() :
     _current_update_rate(0),
     _task(-1),
     _t_actuators(-1),
-    _t_armed(-1),
+    _t_actuator_armed(-1),
     _t_outputs(0),
     _t_actuators_effective(0),
     _num_outputs(0),
@@ -285,12 +289,46 @@ TMRFC::set_mode(Mode mode)
      * are presented on the output pins.
      */
     switch (mode) {
-    case MODE_1PWM:
-	case MODE_2PWM:
-    case MODE_3PWM:
+    case MODE_2PWM: // v1 multi-port with flow control lines as PWM
+        debug("MODE_2PWM");
+        
+        /* default output rates */
+        _pwm_default_rate = 50;
+        _pwm_alt_rate = 50;
+        _pwm_alt_rate_channels = 0;
+
+        /* XXX magic numbers */
+        up_pwm_servo_init(0x3);
+        set_pwm_rate(_pwm_alt_rate_channels, _pwm_default_rate, _pwm_alt_rate);
+
+        break;
     case MODE_4PWM:
+        debug("MODE_4PWM");
+        
+        /* default output rates */
+        _pwm_default_rate = 50;
+        _pwm_alt_rate = 50;
+        _pwm_alt_rate_channels = 0;
+
+        /* XXX magic numbers */
+        up_pwm_servo_init(0xf);
+        set_pwm_rate(_pwm_alt_rate_channels, _pwm_default_rate, _pwm_alt_rate);
+
+        break;
     case MODE_5PWM:
     case MODE_6PWM:
+        debug("MODE_6PWM");
+        
+        /* default output rates */
+        _pwm_default_rate = 50;
+        _pwm_alt_rate = 50;
+        _pwm_alt_rate_channels = 0;
+
+        /* XXX magic numbers */
+        up_pwm_servo_init(0x3f);
+        set_pwm_rate(_pwm_alt_rate_channels, _pwm_default_rate, _pwm_alt_rate);
+
+        break;
 	case MODE_7PWM:
 	case MODE_8PWM:
 	case MODE_9PWM:
@@ -401,8 +439,8 @@ TMRFC::task_main()
     /* force a reset of the update rate */
     _current_update_rate = 0;
 
-    _t_armed = orb_subscribe(ORB_ID(actuator_armed));
-    orb_set_interval(_t_armed, 200);        /* 5Hz update rate */
+    _t_actuator_armed = orb_subscribe(ORB_ID(actuator_armed));
+    orb_set_interval(_t_actuator_armed, 200);       /* 5Hz update rate */
 
     /* advertise the mixed control outputs */
     actuator_outputs_s outputs;
@@ -421,17 +459,17 @@ TMRFC::task_main()
     pollfd fds[2];
     fds[0].fd = _t_actuators;
     fds[0].events = POLLIN;
-    fds[1].fd = _t_armed;
+    fds[1].fd = _t_actuator_armed;
     fds[1].events = POLLIN;
 
-    unsigned num_outputs = (_mode == MODE_2PWM) ? 2 : 4;
-
+#ifdef HRT_PPM_CHANNEL
     // rc input, published to ORB
     struct rc_input_values rc_in;
     orb_advert_t to_input_rc = 0;
 
     memset(&rc_in, 0, sizeof(rc_in));
     rc_in.input_source = RC_INPUT_SOURCE_TMRFC_PPM;
+#endif
 
     log("starting");
 
@@ -485,6 +523,23 @@ TMRFC::task_main()
             /* can we mix? */
             if (_mixers != nullptr) {
 
+                unsigned num_outputs;
+
+                switch (_mode) {
+                case MODE_2PWM:
+                    num_outputs = 2;
+                    break;
+                case MODE_4PWM:
+                    num_outputs = 4;
+                    break;
+                case MODE_6PWM:
+                    num_outputs = 6;
+                    break;
+                default:
+                    num_outputs = 0;
+                    break;
+                }
+
                 /* do mixing */
                 outputs.noutputs = _mixers->mix(&outputs.output[0], num_outputs);
                 outputs.timestamp = hrt_absolute_time();
@@ -527,7 +582,7 @@ TMRFC::task_main()
             actuator_armed_s aa;
 
             /* get new value */
-            orb_copy(ORB_ID(actuator_armed), _t_armed, &aa);
+            orb_copy(ORB_ID(actuator_armed), _t_actuator_armed, &aa);
 
             /* update PWM servo armed status if armed and not locked down */
             bool set_armed = aa.armed && !aa.lockdown;
@@ -537,6 +592,7 @@ TMRFC::task_main()
             }
         }
 
+#ifdef HRT_PPM_CHANNEL
         // see if we have new PPM input data
         if (ppm_last_valid_decode != rc_in.timestamp) {
             // we have a new PPM frame. Publish it.
@@ -556,11 +612,12 @@ TMRFC::task_main()
                 orb_publish(ORB_ID(input_rc), to_input_rc, &rc_in);
             }
         }
+#endif
     }
 
     ::close(_t_actuators);
     ::close(_t_actuators_effective);
-    ::close(_t_armed);
+    ::close(_t_actuator_armed);
 
     /* make sure servos are off */
     up_pwm_servo_deinit();
@@ -659,19 +716,19 @@ TMRFC::pwm_ioctl(file *filp, int cmd, unsigned long arg)
         ret = set_pwm_rate(arg, _pwm_default_rate, _pwm_alt_rate);
         break;
 
-    case PWM_SERVO_SET(0):
-    case PWM_SERVO_SET(1):
-	case PWM_SERVO_SET(2):
-    case PWM_SERVO_SET(3):
-	case PWM_SERVO_SET(4):
-    case PWM_SERVO_SET(5):
-	case PWM_SERVO_SET(6):
-    case PWM_SERVO_SET(7):
-	case PWM_SERVO_SET(8):
-    case PWM_SERVO_SET(9):
-	case PWM_SERVO_SET(10):
+    case PWM_SERVO_SET(12):
     case PWM_SERVO_SET(11):
-	case PWM_SERVO_SET(12):
+	case PWM_SERVO_SET(10):
+    case PWM_SERVO_SET(9):
+	case PWM_SERVO_SET(8):
+    case PWM_SERVO_SET(7):
+	case PWM_SERVO_SET(6):
+    case PWM_SERVO_SET(5):
+	case PWM_SERVO_SET(4):
+    case PWM_SERVO_SET(3):
+	case PWM_SERVO_SET(2):
+    case PWM_SERVO_SET(1):
+	case PWM_SERVO_SET(0):
         if (arg < 2100) {
             up_pwm_servo_set(cmd - PWM_SERVO_SET(0), arg);
         } else {
@@ -680,19 +737,19 @@ TMRFC::pwm_ioctl(file *filp, int cmd, unsigned long arg)
 
         break;
 
-    case PWM_SERVO_GET(0):
-    case PWM_SERVO_GET(1):
-	case PWM_SERVO_GET(2):
-    case PWM_SERVO_GET(3):
-	case PWM_SERVO_GET(4):
-    case PWM_SERVO_GET(5):
-	case PWM_SERVO_GET(6):
-    case PWM_SERVO_GET(7):
-	case PWM_SERVO_GET(8):
-    case PWM_SERVO_GET(9):
-	case PWM_SERVO_GET(10):
+    case PWM_SERVO_GET(12):
     case PWM_SERVO_GET(11):
-	case PWM_SERVO_GET(12):
+	case PWM_SERVO_GET(10):
+    case PWM_SERVO_GET(9):
+	case PWM_SERVO_GET(8):
+    case PWM_SERVO_GET(7):
+	case PWM_SERVO_GET(6):
+    case PWM_SERVO_GET(5):
+	case PWM_SERVO_GET(4):
+    case PWM_SERVO_GET(3):
+	case PWM_SERVO_GET(2):
+    case PWM_SERVO_GET(1):
+	case PWM_SERVO_GET(0):
         *(servo_position_t *)arg = up_pwm_servo_get(cmd - PWM_SERVO_GET(0));
         break;
 
@@ -782,17 +839,17 @@ ssize_t
 TMRFC::write(file *filp, const char *buffer, size_t len)
 {
     unsigned count = len / 2;
-    uint16_t values[8];
+    uint16_t values[13];
 
-    if (count > 8) {
+    if (count > 13) {
         // we only have 8 PWM outputs on the FC
-        count = 8;
+        count = 13;
     }
 
     // allow for misaligned values
-    memcpy(values, buffer, count*2);
+    memcpy(values, buffer, count * 2);
 
-    for (uint8_t i=0; i<count; i++) {
+    for (uint8_t i = 0; i < count; i++) {
         up_pwm_servo_set(i, values[i]);
     }
     return count * 2;
@@ -801,14 +858,20 @@ TMRFC::write(file *filp, const char *buffer, size_t len)
 void
 TMRFC::gpio_reset(void)
 {
-    /*
-     * Setup default GPIO config - all pins as GPIOs, GPIO driver chip
-     * to input mode.
-     */
-    for (unsigned i = 0; i < _ngpio; i++)
-        stm32_configgpio(_gpio_tab[i].input);
-
     #if 0
+    /*
+     * Setup default GPIO config - all pins as GPIOs, input if
+     * possible otherwise output if possible.
+     */
+    for (unsigned i = 0; i < _ngpio; i++) {
+        if (_gpio_tab[i].input != 0) {
+            stm32_configgpio(_gpio_tab[i].input);
+        } else if (_gpio_tab[i].output != 0) {
+            stm32_configgpio(_gpio_tab[i].output);
+        }
+    }
+
+    /* if we have a GPIO direction control, set it to zero (input) */
     stm32_gpiowrite(GPIO_GPIO_DIR, 0);
     stm32_configgpio(GPIO_GPIO_DIR);
     #endif
@@ -817,6 +880,8 @@ TMRFC::gpio_reset(void)
 void
 TMRFC::gpio_set_function(uint32_t gpios, int function)
 {
+#if 0
+    #if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
     /*
      * GPIOs 0 and 1 must have the same direction as they are buffered
      * by a shared 2-port driver.  Any attempt to set either sets both.
@@ -826,12 +891,9 @@ TMRFC::gpio_set_function(uint32_t gpios, int function)
 
         /* flip the buffer to output mode if required */
         if (GPIO_SET_OUTPUT == function)
-            #if 0
             stm32_gpiowrite(GPIO_GPIO_DIR, 1);
-            #else
-            ;
-            #endif
     }
+    #endif
 
     /* configure selected GPIOs as required */
     for (unsigned i = 0; i < _ngpio; i++) {
@@ -854,13 +916,12 @@ TMRFC::gpio_set_function(uint32_t gpios, int function)
         }
     }
 
+    #if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
     /* flip buffer to input mode if required */
     if ((GPIO_SET_INPUT == function) && (gpios & 3))
-        #if 0
         stm32_gpiowrite(GPIO_GPIO_DIR, 0);
-        #else
-        ;
-        #endif
+    #endif
+#endif
 }
 
 void
@@ -1035,7 +1096,10 @@ void
 test(void)
 {
     int fd;
-
+        unsigned servo_count = 0;
+    unsigned pwm_value = 1000;
+    int  direction = 1;
+        
     fd = open(PWM_OUTPUT_DEVICE_PATH, 0);
 
     if (fd < 0)
@@ -1043,14 +1107,73 @@ test(void)
 
     if (ioctl(fd, PWM_SERVO_ARM, 0) < 0)       err(1, "servo arm failed");
 
-    if (ioctl(fd, PWM_SERVO_SET(0), 1000) < 0) err(1, "servo 1 set failed");
+        if (ioctl(fd, PWM_SERVO_GET_COUNT, (unsigned long)&servo_count) != 0) {
+            err(1, "Unable to get servo count\n");        
+        }
 
-    if (ioctl(fd, PWM_SERVO_SET(1), 1200) < 0) err(1, "servo 2 set failed");
+    warnx("Testing %u servos", (unsigned)servo_count);
 
-    if (ioctl(fd, PWM_SERVO_SET(2), 1400) < 0) err(1, "servo 3 set failed");
+    int console = open("/dev/console", O_NONBLOCK | O_RDONLY | O_NOCTTY);
+    if (!console)
+        err(1, "failed opening console");
 
-    if (ioctl(fd, PWM_SERVO_SET(3), 1600) < 0) err(1, "servo 4 set failed");
+    warnx("Press CTRL-C or 'c' to abort.");
 
+    for (;;) {
+        /* sweep all servos between 1000..2000 */
+        servo_position_t servos[servo_count];
+        for (unsigned i = 0; i < servo_count; i++)
+            servos[i] = pwm_value;
+
+                if (direction == 1) {
+                    // use ioctl interface for one direction
+                    for (unsigned i=0; i < servo_count; i++) {
+                        if (ioctl(fd, PWM_SERVO_SET(i), servos[i]) < 0) {
+                            err(1, "servo %u set failed", i);
+                        }
+                    }
+                } else {
+                    // and use write interface for the other direction
+                    int ret = write(fd, servos, sizeof(servos));
+                    if (ret != (int)sizeof(servos))
+            err(1, "error writing PWM servo data, wrote %u got %d", sizeof(servos), ret);
+                }
+
+        if (direction > 0) {
+            if (pwm_value < 2000) {
+                pwm_value++;
+            } else {
+                direction = -1;
+            }
+        } else {
+            if (pwm_value > 1000) {
+                pwm_value--;
+            } else {
+                direction = 1;
+            }
+        }
+
+        /* readback servo values */
+        for (unsigned i = 0; i < servo_count; i++) {
+            servo_position_t value;
+
+            if (ioctl(fd, PWM_SERVO_GET(i), (unsigned long)&value))
+                err(1, "error reading PWM servo %d", i);
+            if (value != servos[i])
+                errx(1, "servo %d readback error, got %u expected %u", i, value, servos[i]);
+        }
+
+        /* Check if user wants to quit */
+        char c;
+        if (read(console, &c, 1) == 1) {
+            if (c == 0x03 || c == 0x63) {
+                warnx("User abort\n");
+                                break;
+            }
+        }
+    }
+
+        close(console);
     close(fd);
 
     exit(0);
@@ -1109,11 +1232,11 @@ fc_main(int argc, char *argv[])
     if (!strcmp(verb, "mode_gpio")) {
         new_mode = PORT_FULL_GPIO;
 
-    } else if (!strcmp(verb, "mode_serial")) {
-        new_mode = PORT_FULL_SERIAL;
-
     } else if (!strcmp(verb, "mode_pwm")) {
         new_mode = PORT_FULL_PWM;
+
+    } else if (!strcmp(verb, "mode_serial")) {
+        new_mode = PORT_FULL_SERIAL;
 
     } else if (!strcmp(verb, "mode_gpio_serial")) {
         new_mode = PORT_GPIO_AND_SERIAL;

@@ -16,6 +16,13 @@ fi
 sleep 2
 mavlink start -b 230400 -d /dev/ttyACM0
 
+# Stop commander
+if commander stop
+then
+	echo "Commander stopped"
+fi
+sleep 1
+
 # Start the commander
 if commander start
 then

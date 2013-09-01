@@ -8,20 +8,10 @@ echo "[HIL] starting.."
 uorb start
 
 # Tell MAVLink that this link is "fast"
-mavlink start -b 230400 -d /dev/console
+mavlink start -b 230400 -d /dev/ttyS0
 
 # Create a fake HIL /dev/pwm_output interface
 hil mode_pwm
-
-#
-# Load microSD params
-#
-echo "[init] loading microSD params"
-param select /fs/microsd/params
-if [ -f /fs/microsd/params ]
-then
-	param load /fs/microsd/params
-fi
 
 #
 # Force some key parameters to sane values
@@ -55,9 +45,7 @@ att_pos_estimator_ekf start
 # Load mixer and start controllers
 #
 mixer load /dev/pwm_output /etc/mixers/FC_AET.mix
-fixedwing_backside start
+fw_pos_control_l1 start
+fw_att_control start
 
 echo "[HIL] setup done, running"
-
-# Exit shell to make it available to MAVLink
-exit 

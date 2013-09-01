@@ -54,7 +54,7 @@
 
 #include "stm32.h"
 #include "stm32_can.h"
-#include "internal.h"
+#include "board_config.h"
 
 #ifdef CONFIG_CAN
 

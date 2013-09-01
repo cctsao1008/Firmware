@@ -32,7 +32,7 @@
  ****************************************************************************/
 
 /*
- * @file pwm.c
+ * @file tmrfc_pwm_servo.c
  *
  * Configuration data for the stm32 pwm_servo driver.
  *
@@ -41,14 +41,14 @@
 
 #include <stdint.h>
 
-#include <drivers/stm32/drv_pwm_servo.h>
-
-#include <arch/board/board.h>
-#include <drivers/drv_pwm_output.h>
-
 #include <stm32.h>
 #include <stm32_gpio.h>
 #include <stm32_tim.h>
+
+#include <drivers/stm32/drv_pwm_servo.h>
+#include <drivers/drv_pwm_output.h>
+
+#include "board_config.h"
 
 #define TIM2_INDEX 0
 #define TIM3_INDEX 1

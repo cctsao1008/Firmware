@@ -42,6 +42,14 @@
 
 #include <sys/ioctl.h>
 
+#if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+/*
+ * TMRFC GPIO numbers.
+ */
+# define TMRFC_DEVICE_PATH	"/dev/tmrfc"
+
+#endif
+
 #ifdef CONFIG_ARCH_BOARD_PX4FMU_V1
 /*
  * PX4FMU GPIO numbers.
