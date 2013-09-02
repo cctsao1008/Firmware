@@ -18,7 +18,7 @@ MODULES		+= drivers/led
 #MODULES	+= drivers/px4io
 #MODULES	+= drivers/px4fmu
 MODULES		+= drivers/tmrfc
-#MODULES		+= drivers/boards/px4fmu-v1
+#MODULES	+= drivers/boards/px4fmu-v1
 MODULES		+= drivers/boards/tmrfc-v1
 #MODULES	+= drivers/ardrone_interface
 #MODULES	+= drivers/l3gd20
@@ -69,7 +69,7 @@ MODULES		+= systemcmds/nshterm
 MODULES		+= modules/commander
 MODULES		+= modules/mavlink
 MODULES		+= modules/mavlink_onboard
-#MODULES		+= modules/gpio_led
+#MODULES	+= modules/gpio_led
 
 #
 # Estimation modules (EKF / other filters)
