@@ -494,7 +494,7 @@ int commander_thread_main(int argc, char *argv[])
 	param_t _param_component_id = param_find("MAV_COMP_ID");
 
 	/* welcome user */
-	warnx("[commander] starting");
+	warnx("starting");
 
 	/* pthread for slow low prio thread */
 	pthread_t commander_low_prio_thread;
