@@ -153,7 +153,7 @@ int led_init()
 	}
 
 	/* the blue LED is only available on FMUv1 but not FMUv2 */
-#ifdef CONFIG_ARCH_BOARD_PX4FMU_V1
+#if defined(CONFIG_ARCH_BOARD_PX4FMU_V1) || defined(CONFIG_ARCH_BOARD_TMRFC_V1)
 
 	if (ioctl(leds, LED_ON, LED_BLUE)) {
 		warnx("Blue LED: ioctl fail\n");

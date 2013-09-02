@@ -171,29 +171,16 @@
 #define BOARD_LED5        3 /* PCA9536 IO3   : RED ( Power ON ) */
 #define BOARD_NLEDS       5
 
-#define BOARD_LED_BLUE    BOARD_LED1
-#define BOARD_LED_RED     BOARD_LED3
-
 /* LED bits for use with stm32_setleds() */
 
-#define BOARD_LED1_BIT    (1 << BOARD_LED1)
-#define BOARD_LED2_BIT    (1 << BOARD_LED2)
-#define BOARD_LED3_BIT    (1 << BOARD_LED3)
-#define BOARD_LED4_BIT    (1 << BOARD_LED4)
-#define BOARD_LED5_BIT    (1 << BOARD_LED5)
+#define BOARD_LED1_BIT    ((1 << BOARD_LED1) | 0x330)
+#define BOARD_LED2_BIT    ((1 << BOARD_LED2) | 0x330)
+#define BOARD_LED3_BIT    ((1 << BOARD_LED3) | 0x330)
+#define BOARD_LED4_BIT    ((1 << BOARD_LED4) | 0x330)
+#define BOARD_LED5_BIT    ((1 << BOARD_LED5) | 0x360)
 
-/* If CONFIG_ARCH_LEDs is defined, then NuttX will control the 2 LEDs on board the
- * tmrfc-v1.  The following definitions describe how NuttX controls the LEDs:
- */
-
-#define LED_STARTED       0  /* LED1 */
-#define LED_HEAPALLOCATE  1  /* LED2 */
-#define LED_IRQSENABLED   2  /* LED1 */
-#define LED_STACKCREATED  3  /* LED1 + LED2 */
-#define LED_INIRQ         4  /* LED1 */
-#define LED_SIGNAL        5  /* LED2 */
-#define LED_ASSERTION     6  /* LED1 + LED2 */
-#define LED_PANIC         7  /* LED1 + LED2 */
+#define BOARD_LED_BLUE    BOARD_LED1_BIT
+#define BOARD_LED_RED     BOARD_LED3_BIT
 
 /*
  *          1. The SDIO clock (SDIOCLK = 48 MHz) is coming from a specific output

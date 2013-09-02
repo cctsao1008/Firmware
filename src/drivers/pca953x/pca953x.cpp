@@ -72,6 +72,8 @@
 
 #include <float.h>
 
+#define PCA953X_DEBUG  0x1
+
 /* PCA0533 4-bit I2C-bus LED dimmer */
 #define PCA9533_ADDRESS        TMR_I2C_OBDEV_PCA9533
 
@@ -286,9 +288,9 @@ PCA953X::pca953x_read_all(void)
 
     set_address(PCA9533_ADDRESS);
 
-    for(int i = 0 ; i < sizeof(_pca9533)/sizeof(uint8_t) ; i++)
+    for(uint8_t i = 0 ; i < sizeof(_pca9533)/sizeof(uint8_t) ; i++)
     {
-        read_reg(i, *((uint8_t*)&(_pca9533)+i));
+        rc = read_reg(i, *((uint8_t*)&(_pca9533)+i));
 
         if (OK != rc)
             goto cleanup;
@@ -298,7 +300,7 @@ PCA953X::pca953x_read_all(void)
 
     for(uint8_t i = 0 ; i < sizeof(_pca9536)/sizeof(uint8_t) ; i++)
     {
-        read_reg(i, *((uint8_t*)&(_pca9536)+i));
+        rc = read_reg(i, *((uint8_t*)&(_pca9536)+i));
 
         if (OK != rc)
             goto cleanup;
@@ -315,7 +317,7 @@ PCA953X::pca953x_update(uint8_t address)
 
     set_address(PCA9533_ADDRESS);
 
-    for(int i = 0 ; i < sizeof(_pca9533)/sizeof(uint8_t) ; i++)
+    for(uint8_t i = 0 ; i < sizeof(_pca9533)/sizeof(uint8_t) ; i++)
     {
         write_reg(i, *((uint8_t*)&(_pca9533)+i));
 
@@ -354,7 +356,7 @@ PCA953X::pca9533_set_peroid(uint8_t psc, uint32_t msec)
 
     if(psc == PCA9533_REG_PSC0)
     {
-        rc = write_reg(PCA9533_REG_PSC0, _pca9533.psc0);
+        rc = write_reg(PCA9533_REG_PSC0, data);
 
         if (OK != rc)
             goto cleanup;
@@ -367,7 +369,7 @@ PCA953X::pca9533_set_peroid(uint8_t psc, uint32_t msec)
     
     if(psc == PCA9533_REG_PSC1)
     {
-        rc = write_reg(PCA9533_REG_PSC1, _pca9533.psc1);
+        rc = write_reg(PCA9533_REG_PSC1, data);
 
         if (OK != rc)
             goto cleanup;
@@ -401,7 +403,7 @@ PCA953X::pca9533_set_pwm(uint8_t pwm, uint32_t duty)
 
     if(pwm == PCA9533_REG_PWM0)
     {
-        rc = write_reg(PCA9533_REG_PWM0, _pca9533.pwm0);
+        rc = write_reg(PCA9533_REG_PWM0, data);
 
         if (OK != rc)
             goto cleanup;
@@ -412,7 +414,7 @@ PCA953X::pca9533_set_pwm(uint8_t pwm, uint32_t duty)
     
     if(pwm == PCA9533_REG_PWM1)
     {
-        rc = write_reg(PCA9533_REG_PWM1, _pca9533.pwm1);
+        rc = write_reg(PCA9533_REG_PWM1, data);
 
         if (OK != rc)
             goto cleanup;
@@ -428,14 +430,24 @@ cleanup:
 uint8_t
 PCA953X::pca9533_set_led(uint8_t led, uint32_t mode)
 {
-    uint8_t rc = OK, val;
+    uint8_t rc = OK, saved;
+
+	#if defined(PCA953X_DEBUG)
+    printf("[PCA953X] PCA953X::pca9533_set_led led = 0x%X, mode = 0x%X \n", led, mode);
+    #endif
+
+	#if defined(PCA953X_DEBUG)
+    printf("[PCA953X] PCA953X::pca9533_set_led (Befor setup)ls0 = 0x%X \n", _pca9533.ls0);
+    #endif
 
     pca9533_bit_t* b = (pca9533_bit_t*)&_pca9533;
+
+	saved = _pca9533.ls0;
 
     set_address(PCA9533_ADDRESS);
 
     if((led & PCA9533_LED0) == PCA9533_LED0)
-        b->ls0.led0= mode;
+        b->ls0.led0 = mode;
     if((led & PCA9533_LED1) == PCA9533_LED1)
         b->ls0.led1 = mode;
     if((led & PCA9533_LED2) == PCA9533_LED2)
@@ -443,11 +455,16 @@ PCA953X::pca9533_set_led(uint8_t led, uint32_t mode)
     if((led & PCA9533_LED3) == PCA9533_LED3)
         b->ls0.led3 = mode;
 
-    val = _pca9533.ls0;
-    rc = write_reg(PCA9533_REG_LS0, val);
+    rc = write_reg(PCA9533_REG_LS0, _pca9533.ls0);
 
     if (OK != rc)
-        goto cleanup;
+    {    _pca9533.ls0 = saved; goto cleanup;}
+		
+	#if defined(PCA953X_DEBUG)
+    printf("[PCA953X] PCA953X::pca9533_set_led (After setup)ls0 = 0x%X \n", _pca9533.ls0);
+    #endif
+
+
 
 cleanup:
     return rc;
@@ -456,11 +473,13 @@ cleanup:
 uint8_t
 PCA953X::pca9536_config_io(uint8_t io, uint8_t set)
 {
-    uint8_t rc = OK, val;
+    uint8_t rc = OK, saved;
 
     pca9536_bit_t* b = (pca9536_bit_t*)&_pca9536;
 
     set_address(PCA9536_ADDRESS);
+
+	saved = _pca9536.config;
 
     if((io & PCA9536_IO0) == PCA9536_IO0)
         b->config.cx0 = set;
@@ -471,11 +490,10 @@ PCA953X::pca9536_config_io(uint8_t io, uint8_t set)
     if((io & PCA9536_IO3) == PCA9536_IO3)
         b->config.cx3 = set;
 
-    val = _pca9536.config;
-    rc = write_reg(PCA9536_REG_CONFIG, val);
+    rc = write_reg(PCA9536_REG_CONFIG, _pca9536.config);
 
     if (OK != rc)
-        goto cleanup;
+    {    _pca9536.config = saved; goto cleanup;}
 
 cleanup:
     return rc;
@@ -515,11 +533,8 @@ PCA953X::init()
     if (I2C::init() != OK)
         goto out;
 
-    /* Turned OFF all LEDs that be connected to pca9533. */
-    pca9533_set_led(PCA9533_LED0|
-                    PCA9533_LED1|
-                    PCA9533_LED2|
-                    PCA9533_LED3, PCA9533_LED_OFF);
+    /* Read back all pca953x settings that we have set from  bootloader */
+    pca953x_read_all();
 
     ret = OK;
 
@@ -530,6 +545,10 @@ out:
 int
 PCA953X::probe()
 {
+    #if defined(PCA953X_DEBUG)
+    printf("[PCA953X] PCA953X::probe \n");
+    #endif
+
     // Assume the device is too stupid to be discoverable.
     return OK;
 }
@@ -539,38 +558,65 @@ PCA953X::ioctl(struct file *filp, int cmd, unsigned long arg)
 {
     int rc = OK;
 
+    #if defined(PCA953X_DEBUG)
+    printf("[PCA953X] PCA953X::ioctl, cmd = 0x%04X, arg = 0x%04X \n", cmd, arg);
+    #endif
+
     switch (cmd) {
 
     case LED_ON :
+
         if(arg != BOARD_LED5_BIT)
         {
-            if(!pca9533_set_led(arg, PCA9533_LED_ON))
-                rc = EIO; goto cleanup;
+            #if defined(PCA953X_DEBUG)
+            printf("[PCA9533] LEDx ON \n");
+            #endif
+
+            if(!pca9533_set_led(arg & 0x0F, PCA9533_LED_ON))
+            {    rc = EIO; goto cleanup;}
                 
         }
         else
         {
+            #if defined(PCA953X_DEBUG)
+            printf("[PCA9536] IO3 as output \n");
+            #endif
+
             if(!pca9536_config_io(PCA9536_IO3, PCA9536_IO_O))
-                rc = EIO; goto cleanup;
+            {    rc = EIO; goto cleanup;}
         }
         break;
 
     case LED_OFF :
-         if(arg != BOARD_LED5_BIT)
-        {
 
-            if(!pca9533_set_led(arg, PCA9533_LED_OFF))
-                rc = EIO; goto cleanup;
+        if(arg != BOARD_LED5_BIT)
+        {
+            #if defined(PCA953X_DEBUG)
+            printf("[PCA9533] LEDx OFF \n");
+            #endif
+
+            if(!pca9533_set_led(arg & 0x0F, PCA9533_LED_OFF))
+            {    rc = EIO; goto cleanup;}
 
         }
         else
         {
+
+            #if defined(PCA953X_DEBUG)
+            printf("[PCA9536] IO3 as input \n");
+            #endif
+
             if(!pca9536_config_io(PCA9536_IO3, PCA9536_IO_O))
-                rc = EIO; goto cleanup;
+            {    rc = EIO; goto cleanup;}
         }
         break;
 
     case LED_TOGGLE :
+
+        #if defined(PCA953X_DEBUG)
+        printf("[PCA953X] LEDx LED_TOGGLE \n");
+        #endif
+
         if(arg != BOARD_LED5_BIT)
         {
             if(arg == BOARD_LED1_BIT)
@@ -607,18 +653,26 @@ cleanup:
 void
 PCA953X::start()
 {
-
+    #if defined(PCA953X_DEBUG)
+    printf("[PCA953X] PCA953X::start \n");
+    #endif
 }
 
 void
 PCA953X::stop()
 {
-
+    #if defined(PCA953X_DEBUG)
+    printf("[PCA953X] PCA953X::stop \n");
+    #endif
 }
 
 int
 PCA953X::reset()
 {
+    #if defined(PCA953X_DEBUG)
+    printf("[PCA953X] PCA953X::reset \n");
+    #endif
+
     return OK;
 }
 
@@ -737,6 +791,10 @@ test()
 void
 reset()
 {
+    #if defined(PCA953X_DEBUG)
+    printf("[PCA953X] reset \n");
+    #endif
+
     int fd = open(PCA953X_DEVICE_PATH, O_RDONLY);
 
     if (fd < 0)
@@ -751,6 +809,10 @@ reset()
 void
 info()
 {
+    #if defined(PCA953X_DEBUG)
+    printf("[PCA953X] info \n");
+    #endif
+
     if(g_dev == nullptr)
         errx(1, "driver not running");
 
@@ -764,6 +826,10 @@ info()
 void
 drv_pca953x_start(void)
 {
+    #if defined(PCA953X_DEBUG)
+    printf("[PCA953X] drv_pca953x_start \n");
+    #endif
+
     if (pca953x::g_dev != nullptr)
         /* if already started, the still command succeeded */
         errx(0, "already started");

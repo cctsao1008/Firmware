@@ -38,8 +38,11 @@
  */
 
 #include <nuttx/config.h>
+#include <stdio.h>
 #include <drivers/device/device.h>
 #include <drivers/drv_led.h>
+
+#define LED_DEBUG  0x1
 
 /*
  * Ideally we'd be able to get these from up_internal.h,
@@ -79,6 +82,10 @@ LED::~LED()
 int
 LED::init()
 {
+    #if defined(LED_DEBUG)
+    printf("[LED] init \n");
+    #endif
+
 	CDev::init();
 	led_init();
 
@@ -90,16 +97,35 @@ LED::ioctl(struct file *filp, int cmd, unsigned long arg)
 {
 	int result = OK;
 
+	#if defined(LED_DEBUG)
+    printf("[LED] ioctl, cmd = 0x%04X, arg = 0x%04X \n", cmd, arg);
+    #endif
+
 	switch (cmd) {
 	case LED_ON:
+		
+		#if defined(LED_DEBUG)
+        printf("[LED] LED_ON \n");
+        #endif
+
 		led_on(arg);
 		break;
 
 	case LED_OFF:
+		
+		#if defined(LED_DEBUG)
+        printf("[LED] LED_OFF \n");
+        #endif
+
 		led_off(arg);
 		break;
 
 	case LED_TOGGLE:
+		
+		#if defined(LED_DEBUG)
+        printf("[LED] LED_TOGGLE \n");
+        #endif
+
 		led_toggle(arg);
 		break;
 
@@ -118,6 +144,10 @@ LED	*gLED;
 void
 drv_led_start(void)
 {
+    #if defined(LED_DEBUG)
+    printf("[LED] drv_led_start \n");
+    #endif
+
 	if (gLED == nullptr) {
 		gLED = new LED;
 		if (gLED != nullptr)

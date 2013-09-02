@@ -52,8 +52,48 @@
 
 /* LED colour codes */
 #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
-#include <arch/board/board.h>
-#define LED_AMBER		BOARD_LED1_BIT
+/* LED definitions ******************************************************************/
+/* If CONFIG_ARCH_LEDS is not defined, then the user can control the LEDs in any
+ * way.  The following definitions are used to access individual LEDs.
+ */
+
+/* LED index values for use with stm32_setled()
+ *  
+ *  Note : All LEDs are controlled by PCA9533 and PCA9536 in TMR-FC V1.0 via I2C
+ */
+ 
+#define BOARD_LED1        0 /* PCA9533 LED0 : AMBER */
+#define BOARD_LED2        1 /* PCA9533 LED1 : BLUE */
+#define BOARD_LED3        2 /* PCA9533 LED2 : GREEN ( ON, OS in running state )*/
+#define BOARD_LED4        3 /* PCA9533 LED3 : RED     */
+#define BOARD_LED5        3 /* PCA9536 IO3   : RED ( Power ON ) */
+#define BOARD_NLEDS       5
+
+/* LED bits for use with stm32_setleds() */
+
+#define BOARD_LED1_BIT    ((1 << BOARD_LED1) | 0x330)
+#define BOARD_LED2_BIT    ((1 << BOARD_LED2) | 0x330)
+#define BOARD_LED3_BIT    ((1 << BOARD_LED3) | 0x330)
+#define BOARD_LED4_BIT    ((1 << BOARD_LED4) | 0x330)
+#define BOARD_LED5_BIT    ((1 << BOARD_LED5) | 0x360)
+
+#define BOARD_LED_BLUE    BOARD_LED1_BIT
+#define BOARD_LED_RED     BOARD_LED3_BIT
+
+/* If CONFIG_ARCH_LEDs is defined, then NuttX will control the 2 LEDs on board the
+ * tmrfc-v1.  The following definitions describe how NuttX controls the LEDs:
+ */
+
+#define LED_STARTED       0  /* LED1 */
+#define LED_HEAPALLOCATE  1  /* LED2 */
+#define LED_IRQSENABLED   2  /* LED1 */
+#define LED_STACKCREATED  3  /* LED1 + LED2 */
+#define LED_INIRQ         4  /* LED1 */
+#define LED_SIGNAL        5  /* LED2 */
+#define LED_ASSERTION     6  /* LED1 + LED2 */
+#define LED_PANIC         7  /* LED1 + LED2 */
+
+#define LED_AMBER		BOARD_LED4_BIT
 #define LED_BLUE		BOARD_LED2_BIT
 #define LED_GREEN       BOARD_LED3_BIT
 #define LED_RED			BOARD_LED4_BIT

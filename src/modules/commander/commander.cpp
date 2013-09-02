@@ -1232,7 +1232,7 @@ check_valid(hrt_abstime timestamp, hrt_abstime timeout, bool valid_in, bool *val
 void
 toggle_status_leds(vehicle_status_s *status, actuator_armed_s *armed, bool changed)
 {
-#ifdef CONFIG_ARCH_BOARD_PX4FMU_V1
+#if defined(CONFIG_ARCH_BOARD_PX4FMU_V1) || defined(CONFIG_ARCH_BOARD_TMRFC_V1)
 
 	/* this runs at around 20Hz, full cycle is 16 ticks = 10/16Hz */
 	if (armed->armed) {
