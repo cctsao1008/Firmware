@@ -179,8 +179,8 @@
 #define BOARD_LED4_BIT    ((1 << BOARD_LED4) | 0x330)
 #define BOARD_LED5_BIT    ((1 << BOARD_LED5) | 0x360)
 
-#define BOARD_LED_BLUE    BOARD_LED1_BIT
-#define BOARD_LED_RED     BOARD_LED3_BIT
+#define BOARD_LED_BLUE    BOARD_LED2_BIT
+#define BOARD_LED_RED     BOARD_LED4_BIT
 
 /*
  *          1. The SDIO clock (SDIOCLK = 48 MHz) is coming from a specific output

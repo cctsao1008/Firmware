@@ -1242,12 +1242,24 @@ toggle_status_leds(vehicle_status_s *status, actuator_armed_s *armed, bool chang
 	} else if (armed->ready_to_arm) {
 		/* ready to arm, blink at 1Hz */
 		if (leds_counter % 20 == 0)
+		{
+			#if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+			led_toggle(LED_BLUE | LED_BLINK_1HZ);
+			#else
 			led_toggle(LED_BLUE);
+			#endif
+		}
 
 	} else {
 		/* not ready to arm, blink at 10Hz */
 		if (leds_counter % 2 == 0)
+		{
+			#if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+			led_toggle(LED_BLUE | LED_BLINK_10HZ);
+			#else
 			led_toggle(LED_BLUE);
+			#endif
+		}
 	}
 
 #endif
@@ -1298,7 +1310,11 @@ toggle_status_leds(vehicle_status_s *status, actuator_armed_s *armed, bool chang
 	/* give system warnings on error LED, XXX maybe add memory usage warning too */
 	if (status->load > 0.95f) {
 		if (leds_counter % 2 == 0)
+			#if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+			led_toggle(LED_AMBER | LED_BLINK_10HZ);
+			#else
 			led_toggle(LED_AMBER);
+			#endif
 
 	} else {
 		led_off(LED_AMBER);

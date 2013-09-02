@@ -77,8 +77,8 @@
 #define BOARD_LED4_BIT    ((1 << BOARD_LED4) | 0x330)
 #define BOARD_LED5_BIT    ((1 << BOARD_LED5) | 0x360)
 
-#define BOARD_LED_BLUE    BOARD_LED1_BIT
-#define BOARD_LED_RED     BOARD_LED3_BIT
+#define BOARD_LED_BLUE    BOARD_LED2_BIT
+#define BOARD_LED_RED     BOARD_LED4_BIT
 
 /* If CONFIG_ARCH_LEDs is defined, then NuttX will control the 2 LEDs on board the
  * tmrfc-v1.  The following definitions describe how NuttX controls the LEDs:
@@ -102,6 +102,13 @@
 #define LED_ON			_IOC(_LED_BASE, 0)
 #define LED_OFF			_IOC(_LED_BASE, 1)
 #define LED_TOGGLE		_IOC(_LED_BASE, 2)
+
+#define LED_BLINK_1HZ  	((1000 * 2) << 12)
+#define LED_BLINK_2HZ  	((500  * 2) << 12)
+#define LED_BLINK_4HZ  	((250  * 2) << 12)
+#define LED_BLINK_8HZ  	((125  * 2) << 12)
+#define LED_BLINK_10HZ  ((100  * 2) << 12)
+#define LED_BLINK_20HZ  ((50   * 2) << 12)
 #else
 #define LED_AMBER		1
 #define LED_RED			1	/* some boards have red rather than amber */

@@ -432,17 +432,17 @@ PCA953X::pca9533_set_led(uint8_t led, uint32_t mode)
 {
     uint8_t rc = OK, saved;
 
-	#if defined(PCA953X_DEBUG)
+    #if defined(PCA953X_DEBUG)
     printf("[PCA953X] PCA953X::pca9533_set_led led = 0x%X, mode = 0x%X \n", led, mode);
     #endif
 
-	#if defined(PCA953X_DEBUG)
+    #if defined(PCA953X_DEBUG)
     printf("[PCA953X] PCA953X::pca9533_set_led (Befor setup)ls0 = 0x%X \n", _pca9533.ls0);
     #endif
 
     pca9533_bit_t* b = (pca9533_bit_t*)&_pca9533;
 
-	saved = _pca9533.ls0;
+    saved = _pca9533.ls0;
 
     set_address(PCA9533_ADDRESS);
 
@@ -459,8 +459,8 @@ PCA953X::pca9533_set_led(uint8_t led, uint32_t mode)
 
     if (OK != rc)
     {    _pca9533.ls0 = saved; goto cleanup;}
-		
-	#if defined(PCA953X_DEBUG)
+        
+    #if defined(PCA953X_DEBUG)
     printf("[PCA953X] PCA953X::pca9533_set_led (After setup)ls0 = 0x%X \n", _pca9533.ls0);
     #endif
 
@@ -479,7 +479,7 @@ PCA953X::pca9536_config_io(uint8_t io, uint8_t set)
 
     set_address(PCA9536_ADDRESS);
 
-	saved = _pca9536.config;
+    saved = _pca9536.config;
 
     if((io & PCA9536_IO0) == PCA9536_IO0)
         b->config.cx0 = set;
@@ -558,6 +558,9 @@ PCA953X::ioctl(struct file *filp, int cmd, unsigned long arg)
 {
     int rc = OK;
 
+    pca9533_bit_t* b33 = (pca9533_bit_t*)&_pca9533;
+    pca9536_bit_t* b36 = (pca9536_bit_t*)&_pca9536;
+
     #if defined(PCA953X_DEBUG)
     printf("[PCA953X] PCA953X::ioctl, cmd = 0x%04X, arg = 0x%04X \n", cmd, arg);
     #endif
@@ -566,22 +569,34 @@ PCA953X::ioctl(struct file *filp, int cmd, unsigned long arg)
 
     case LED_ON :
 
-        if(arg != BOARD_LED5_BIT)
+        if((arg & 0xFFF) != BOARD_LED5_BIT)
         {
+            if((b33->ls0.led0 == PCA9533_LED_ON) && (arg == BOARD_LED1_BIT))
+                break;
+
+            if((b33->ls0.led1 == PCA9533_LED_ON) && (arg == BOARD_LED2_BIT))
+                break;
+
+            if((b33->ls0.led2 == PCA9533_LED_ON) && (arg == BOARD_LED3_BIT))
+                break;
+
+            if((b33->ls0.led3 == PCA9533_LED_ON) && (arg == BOARD_LED4_BIT))
+                break;
+
             #if defined(PCA953X_DEBUG)
             printf("[PCA9533] LEDx ON \n");
             #endif
-
             if(pca9533_set_led(arg & 0x0F, PCA9533_LED_ON) != OK)
             {    rc = EIO; goto cleanup;}
                 
         }
         else
         {
+            if(b36->config.cx3 == PCA9536_IO_O)
+                break;
             #if defined(PCA953X_DEBUG)
-            printf("[PCA9536] IO3 as output \n");
+            printf("[PCA9536]  IO3 as output \n");
             #endif
-
             if(pca9536_config_io(PCA9536_IO3, PCA9536_IO_O) != OK)
             {    rc = EIO; goto cleanup;}
         }
@@ -589,13 +604,24 @@ PCA953X::ioctl(struct file *filp, int cmd, unsigned long arg)
 
     case LED_OFF :
 
-        if(arg != BOARD_LED5_BIT)
+        if((arg & 0xFFF) != BOARD_LED5_BIT)
         {
+            if((b33->ls0.led0 == PCA9533_LED_OFF) && (arg == BOARD_LED1_BIT))
+                break;
+
+            if((b33->ls0.led1 == PCA9533_LED_OFF) && (arg == BOARD_LED2_BIT))
+                break;
+
+            if((b33->ls0.led2 == PCA9533_LED_OFF) && (arg == BOARD_LED3_BIT))
+                break;
+
+            if((b33->ls0.led3 == PCA9533_LED_OFF) && (arg == BOARD_LED4_BIT))
+                break;
+
             #if defined(PCA953X_DEBUG)
             printf("[PCA9533] LEDx OFF \n");
             #endif
-
-            if(pca9533_set_led(arg & 0x0F, PCA9533_LED_OFF) != OK)
+            if(pca9533_set_led(arg & 0xF, PCA9533_LED_OFF) != OK)
             {    rc = EIO; goto cleanup;}
 
         }
@@ -606,7 +632,7 @@ PCA953X::ioctl(struct file *filp, int cmd, unsigned long arg)
             printf("[PCA9536] IO3 as input \n");
             #endif
 
-            if(pca9536_config_io(PCA9536_IO3, PCA9536_IO_O) != OK)
+            if(pca9536_config_io(arg & 0xF, PCA9536_IO_O) != OK)
             {    rc = EIO; goto cleanup;}
         }
         break;
@@ -617,28 +643,48 @@ PCA953X::ioctl(struct file *filp, int cmd, unsigned long arg)
         printf("[PCA953X] LEDx LED_TOGGLE \n");
         #endif
 
-        if(arg != BOARD_LED5_BIT)
+        if((arg & 0xFFF) != BOARD_LED5_BIT)
         {
-            if(arg == BOARD_LED1_BIT)
+            if((arg & 0xFFF) == BOARD_LED1_BIT)
             {
-
+                #if defined(PCA953X_DEBUG)
+                printf("[PCA953X] LED_TOGGLE LED1 \n");
+                #endif
+                if(pca9533_set_led(arg & 0xF, ((b33->ls0.led0) ^= (1 << 0))) != OK)
+                {    rc = EIO; goto cleanup;}
             }
-            else if(arg == BOARD_LED2_BIT)
+            else if((arg & 0xFFF) == BOARD_LED2_BIT)
             {
-
+                #if defined(PCA953X_DEBUG)
+                printf("[PCA953X] LED_TOGGLE LED2 \n");
+                #endif
+                if(pca9533_set_led(arg & 0xF, ((b33->ls0.led1) ^= (1 << 0))) != OK)
+                {    rc = EIO; goto cleanup;}
             }
-            else if(arg == BOARD_LED3_BIT)
+            else if((arg & 0xFFF) == BOARD_LED3_BIT)
             {
-
+                #if defined(PCA953X_DEBUG)
+                printf("[PCA953X] LED_TOGGLE LED3 \n");
+                #endif
+                if(pca9533_set_led(arg & 0xF, ((b33->ls0.led2) ^= (1 << 0))) != OK)
+                {    rc = EIO; goto cleanup;}
             }
-            else if(arg == BOARD_LED4_BIT)
+            else if((arg & 0xFFF) == BOARD_LED4_BIT)
             {
-
+                #if defined(PCA953X_DEBUG)
+                printf("[PCA953X] LED_TOGGLE LED4 \n");
+                #endif
+                if(pca9533_set_led(arg & 0xF, ((b33->ls0.led3) ^= (1 << 0))) != OK)
+                {    rc = EIO; goto cleanup;}
             }
         }
         else
         {
-
+                #if defined(PCA953X_DEBUG)
+                printf("[PCA953X] LED_TOGGLE IO3 \n");
+                #endif
+                if(pca9536_config_io(arg & 0xF, ((b36->config.cx3) ^= (1 << 0))) != OK)
+                {    rc = EIO; goto cleanup;}
         }
         break;
 
