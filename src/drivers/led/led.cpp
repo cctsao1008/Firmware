@@ -42,7 +42,7 @@
 #include <drivers/device/device.h>
 #include <drivers/drv_led.h>
 
-#define LED_DEBUG  0x1
+//#define LED_DEBUG  0x1
 
 /*
  * Ideally we'd be able to get these from up_internal.h,

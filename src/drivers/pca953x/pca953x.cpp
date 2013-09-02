@@ -72,7 +72,7 @@
 
 #include <float.h>
 
-#define PCA953X_DEBUG  0x1
+//#define PCA953X_DEBUG  0x1
 
 /* PCA0533 4-bit I2C-bus LED dimmer */
 #define PCA9533_ADDRESS        TMR_I2C_OBDEV_PCA9533
