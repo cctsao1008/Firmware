@@ -201,12 +201,16 @@ __EXPORT int nsh_archinitialize(void)
    #endif
 
     /* All LEDs controlled by PCA9533 and PCA9536 in TMR-FC via I2C */
+    /* use pca953x as default LED driver(cdev), and register it to "/dev/led", and disable original LED driver (led.cpp) */
     message("[boot] Initializing pca953x driver\n");
     drv_pca953x_start();
 
     /* initial LED state */
     message("[boot] Initializing generic LED driver\n");
+
+    #if 0 /* disable original LED driver (led.cpp), because it don't work, don't know why it?? */
     drv_led_start();
+    #endif
 
     led_off(LED_AMBER);
     led_off(LED_BLUE);

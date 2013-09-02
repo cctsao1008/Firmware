@@ -97,6 +97,10 @@ LED::ioctl(struct file *filp, int cmd, unsigned long arg)
 {
 	int result = OK;
 
+	int	fd;
+
+	fd = open(PCA953X_DEVICE_PATH, 0);
+
 	#if defined(LED_DEBUG)
     printf("[LED] ioctl, cmd = 0x%04X, arg = 0x%04X \n", cmd, arg);
     #endif

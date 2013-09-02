@@ -40,6 +40,8 @@
 #include <nuttx/config.h>
 
 #include <stdbool.h>
+#include <stdio.h>
+
 #include <fcntl.h>
 
 #include <systemlib/err.h>
@@ -50,11 +52,6 @@
 #include <arch/board/board.h>
 
 #include <drivers/drv_led.h>
-
-#define _LED_BASE       0x2800
-#define LED_ON          _IOC(_LED_BASE, 0)
-#define LED_OFF         _IOC(_LED_BASE, 1)
-#define LED_TOGGLE      _IOC(_LED_BASE, 2)
 
 /*
  * Ideally we'd be able to get these from up_internal.h,
@@ -70,16 +67,29 @@ extern void led_off(int led);
 extern void led_toggle(int led);
 __END_DECLS
 
-int fd;
+int fd = NULL;
 
 __EXPORT void led_init()
 {
     /* Configure LED1-5 for output */
-    fd = open(PCA953X_DEVICE_PATH, O_RDONLY);
+    if (fd != NULL)
+        printf("[TMRFC_LED] led_init, already initialized \n");
+    else
+    {
+        fd = open(PCA953X_DEVICE_PATH, O_RDONLY);
+
+        if(fd != NULL)
+            printf("[TMRFC_LED] led_init, successfully \n");
+        else
+            printf("[TMRFC_LED] led_init, failed \n");
+    }
+    
 }
 
 __EXPORT void led_on(int led)
 {
+    printf("[TMRFC_LED] led_on, led = 0x%X \n", led);
+
     if (led == BOARD_LED1_BIT)
     {
         ioctl(fd, LED_ON, BOARD_LED1_BIT);
@@ -108,6 +118,8 @@ __EXPORT void led_on(int led)
 
 __EXPORT void led_off(int led)
 {
+    printf("[TMRFC_LED] led_off, led = 0x%X \n", led);
+
     if (led == BOARD_LED1_BIT)
     {
         ioctl(fd, LED_OFF, BOARD_LED1_BIT);
@@ -136,6 +148,8 @@ __EXPORT void led_off(int led)
     
 __EXPORT void led_toggle(int led)
 {
+    printf("[TMRFC_LED] led_toggle, led = 0x%X \n", led);
+
     if (led == BOARD_LED1_BIT)
     {
         ioctl(fd, LED_TOGGLE, BOARD_LED1_BIT);

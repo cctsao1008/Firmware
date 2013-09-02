@@ -572,7 +572,7 @@ PCA953X::ioctl(struct file *filp, int cmd, unsigned long arg)
             printf("[PCA9533] LEDx ON \n");
             #endif
 
-            if(!pca9533_set_led(arg & 0x0F, PCA9533_LED_ON))
+            if(pca9533_set_led(arg & 0x0F, PCA9533_LED_ON) != OK)
             {    rc = EIO; goto cleanup;}
                 
         }
@@ -582,7 +582,7 @@ PCA953X::ioctl(struct file *filp, int cmd, unsigned long arg)
             printf("[PCA9536] IO3 as output \n");
             #endif
 
-            if(!pca9536_config_io(PCA9536_IO3, PCA9536_IO_O))
+            if(pca9536_config_io(PCA9536_IO3, PCA9536_IO_O) != OK)
             {    rc = EIO; goto cleanup;}
         }
         break;
@@ -595,7 +595,7 @@ PCA953X::ioctl(struct file *filp, int cmd, unsigned long arg)
             printf("[PCA9533] LEDx OFF \n");
             #endif
 
-            if(!pca9533_set_led(arg & 0x0F, PCA9533_LED_OFF))
+            if(pca9533_set_led(arg & 0x0F, PCA9533_LED_OFF) != OK)
             {    rc = EIO; goto cleanup;}
 
         }
@@ -606,7 +606,7 @@ PCA953X::ioctl(struct file *filp, int cmd, unsigned long arg)
             printf("[PCA9536] IO3 as input \n");
             #endif
 
-            if(!pca9536_config_io(PCA9536_IO3, PCA9536_IO_O))
+            if(pca9536_config_io(PCA9536_IO3, PCA9536_IO_O) != OK)
             {    rc = EIO; goto cleanup;}
         }
         break;
