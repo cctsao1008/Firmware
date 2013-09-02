@@ -104,26 +104,36 @@
 #define MIN_MSEC 7 // 7 msec for minimal
 #define MAX_MSEC 1684 // 1684 msec for maximal
 
-typedef struct _pca9533_t
+struct pca9533_bit_t
 {
-    uint8_t input ;
-    uint8_t psc0 ;
-    uint8_t pwm0 ;
-    uint8_t psc1 ;
-    uint8_t pwm1 ;
+    uint8_t input : 8 ;
+    uint8_t psc0  : 8 ;
+    uint8_t pwm0  : 8 ;
+    uint8_t psc1  : 8 ;
+    uint8_t pwm1  : 8 ;
     
-    union
+    struct _ls0
     {
-    	uint8_t ls0 ;
-    	struct
-    	{
-    		uint8_t led0 : 2 ;
-        	uint8_t led1 : 2 ;
-        	uint8_t led2 : 2 ;
-        	uint8_t led3 : 2 ;
-    	};
-    }ls0 ;
-}pca9533_t;
+    	uint8_t led0 : 2 ;
+        uint8_t led1 : 2 ;
+       	uint8_t led2 : 2 ;
+        uint8_t led3 : 2 ;
+    }ls0;
+
+};
+
+struct pca9533_t
+{
+    uint8_t input : 4 ;
+	uint8_t       : 4 ;
+    uint8_t psc0  : 8 ;
+    uint8_t pwm0  : 8 ;
+    uint8_t psc1  : 8 ;
+    uint8_t pwm1  : 8 ;
+	uint8_t ls0   : 8 ;
+    
+
+};
 
 /* PCA0536 4-bit I2C-bus and SMBus I/O port */
 #define PCA9536_ADDRESS        TMR_I2C_OBDEV_PCA9536
@@ -142,63 +152,61 @@ typedef struct _pca9533_t
 #define PCA9536_IO_O 0x00
 #define PCA9536_IO_I 0x01
 
-typedef struct _pca9536_t
+struct pca9536_bit_t
 {
-    union
-    {
-    	uint8_t input ;
-    	struct
-    	{
-    		uint8_t ix0 : 1 ;
-    		uint8_t ix1 : 1 ;
-    		uint8_t ix2 : 1 ;
-    		uint8_t ix3 : 1 ;
-    	};
+
+   	struct _input
+   	{
+   		uint8_t ix0 : 1 ;
+    	uint8_t ix1 : 1 ;
+    	uint8_t ix2 : 1 ;
+    	uint8_t ix3 : 1 ;
     }input;
 
-    union
-    {
-    	uint8_t output ;
-    	struct
-    	{
-    		uint8_t ox0 : 1 ;
-    		uint8_t ox1 : 1 ;
-    		uint8_t ox2 : 1 ;
-    		uint8_t ox3 : 1 ;
-    	};
-    }output;
 
-    union
+    struct _output
     {
-    	uint8_t polarity ;
-    	struct
-    	{
-    		uint8_t nx0 : 1 ;
-    		uint8_t nx1 : 1 ;
-    		uint8_t nx2 : 1 ;
-    		uint8_t nx3 : 1 ;
-    	};
+    	uint8_t ox0 : 1 ;
+    	uint8_t ox1 : 1 ;
+    	uint8_t ox2 : 1 ;
+    	uint8_t ox3 : 1 ;
+   	}output;
+
+
+   	struct _polarity
+    {
+    	uint8_t nx0 : 1 ;
+    	uint8_t nx1 : 1 ;
+    	uint8_t nx2 : 1 ;
+    	uint8_t nx3 : 1 ;
     }polarity;
 
-    union
+    struct _config
     {
-    	uint8_t config ;
-    	struct
-    	{
-    		uint8_t cx0 : 1 ;
-    		uint8_t cx1 : 1 ;
-    		uint8_t cx2 : 1 ;
-    		uint8_t cx3 : 1 ;
-    	};
+    	uint8_t cx0 : 1 ;
+    	uint8_t cx1 : 1 ;
+    	uint8_t cx2 : 1 ;
+    	uint8_t cx3 : 1 ;
     }config;
-}pca9536_t;
+};
 
-typedef struct
+struct pca9536_t
+{
+   	uint8_t input    : 4 ;
+	uint8_t          : 4 ;
+	uint8_t output   : 4 ;
+	uint8_t          : 4 ;
+	uint8_t polarity : 4 ;
+	uint8_t          : 4 ;
+	uint8_t config   : 4 ;
+	uint8_t          : 4 ;
+};
+
+struct pca_tbl_t
 {
     pca9533_t* pca9533;
     pca9536_t* pca9536;
-
-}pca_tbl_t;
+};
 
 /* oddly, ERROR is not defined for c++ */
 #ifdef ERROR
@@ -215,8 +223,6 @@ class PCA953X : public device::I2C
 public:
 	PCA953X(int bus);
 	virtual ~PCA953X();
-
-
 	virtual int		init();
 	virtual int		ioctl(struct file *filp, int cmd, unsigned long arg);
 
@@ -231,8 +237,8 @@ protected:
 private:
 	work_s			_work;
 
-	pca9533_t pca9533_tbl;
-    pca9536_t pca9536_tbl;
+	pca9533_t _pca9533;
+    pca9536_t _pca9536;
 
 	int			_bus;			/**< the bus the device is connected to */
 
@@ -286,24 +292,22 @@ PCA953X::pca953x_update(uint8_t address)
 {
     uint8_t rc = false;
 
-    #if 0
-    if(i2c_dev == 0)
-        goto cleanup;
-	#endif
-
-    if(address == PCA9533_ADDRESS)
+    if(address == OK)
     {
-        #if 0
-        if(!i2c_write(i2c_dev->i2c.id, PCA9533_ADDR, PCA9533_REG_START, (u8 *)&pca9533_tbl, sizeof(pca9533_tbl)/sizeof(u8)))
-            goto cleanup;
-		#endif
+		set_address(PCA9533_ADDRESS);
+
+		transfer((uint8_t *)&_pca9533, sizeof(_pca9533)/sizeof(uint8_t), nullptr, 0);
+		if (OK != rc)
+		    goto cleanup;
     }
     else if(address == PCA9536_ADDRESS)
     {
-        #if 0
-        if(!i2c_write(i2c_dev->i2c.id, PCA9536_ADDR, PCA9536_REG_START, (u8 *)&pca9536_tbl, sizeof(pca9536_tbl)/sizeof(u8)))
-            goto cleanup;
-		#endif
+		set_address(PCA9536_ADDRESS);
+
+		transfer((uint8_t *)&_pca9536, sizeof(_pca9536)/sizeof(uint8_t), nullptr, 0);
+		if (OK != rc)
+		    goto cleanup;
+		
     }
 
     rc = true;
@@ -325,30 +329,33 @@ PCA953X::pca9533_set_peroid(uint8_t psc, uint32_t msec)
 
     data = (uint8_t)((float)msec * 0.152f) - 1;
 
+	set_address(PCA9533_ADDRESS);
+
     if(psc == PCA9533_REG_PSC0)
     {
-        #if 0
-        if(!i2c_write(i2c_dev->i2c.id, PCA9533_ADDR, PCA9533_REG_PSC0, &data, 0x01))
-            goto cleanup;
-		#endif
+		rc = write_reg(PCA9533_REG_PSC0, _pca9533.psc0);
+
+	    if (OK != rc)
+		    goto cleanup;
 
         // save old psc0
-        rc = pca9533_tbl.psc0;
+        rc = _pca9533.psc0;
         // update table
-        pca9533_tbl.psc0 = data;
+        _pca9533.psc0 = data;
     }
     
     if(psc == PCA9533_REG_PSC1)
     {
-        #if 0
-        if(!i2c_write(i2c_dev->i2c.id, PCA9533_ADDR, PCA9533_REG_PSC1, &data, 0x01))
-            goto cleanup;
-		#endif
+		rc = write_reg(PCA9533_REG_PSC1, _pca9533.psc1);
+
+	    if (OK != rc)
+		    goto cleanup;
+		
 
         // save old psc1
-        rc = pca9533_tbl.psc1;
+        rc = _pca9533.psc1;
         // update table
-        pca9533_tbl.psc1 = data;
+        _pca9533.psc1 = data;
     }
 
 cleanup:
@@ -358,9 +365,10 @@ cleanup:
 uint8_t
 PCA953X::pca9533_set_pwm(uint8_t pwm, uint32_t duty)
 {
-    uint8_t rc = false, data = 0;
+    uint8_t rc = false;
+    int8_t data = 0;
 
-    if(duty < 0)
+    if(duty < 1)
         data = 0;
 
     if(duty > 100)
@@ -368,29 +376,29 @@ PCA953X::pca9533_set_pwm(uint8_t pwm, uint32_t duty)
 
     data = (uint8_t)(((float)duty/100.0f)*256.0f);
 
+	set_address(PCA9533_ADDRESS);
+
     if(pwm == PCA9533_REG_PWM0)
     {
-        #if 0
-        if(!i2c_write(i2c_dev->i2c.id, PCA9533_ADDR, PCA9533_REG_PWM0, &data, 0x01))
-        goto cleanup;
-		#endif
+		rc = write_reg(PCA9533_REG_PWM0, _pca9533.pwm0);
+
+	    if (OK != rc)
+		    goto cleanup;
 
         // update table
-        pca9533_tbl.pwm0 = data;
+        _pca9533.pwm0 = data;
     }
     
     if(pwm == PCA9533_REG_PWM1)
     {
-        #if 0
-        if(!i2c_write(i2c_dev->i2c.id, PCA9533_ADDR, PCA9533_REG_PWM1, &data, 0x01))
-        goto cleanup;
-		#endif
+		rc = write_reg(PCA9533_REG_PWM1, _pca9533.pwm1);
+
+	    if (OK != rc)
+		    goto cleanup;
 
         // update table
-        pca9533_tbl.pwm1 = data;
+        _pca9533.pwm1 = data;
     }
-
-    rc = true;
 
 cleanup:
     return rc;
@@ -399,23 +407,26 @@ cleanup:
 uint8_t
 PCA953X::pca9533_set_led(uint8_t led, uint32_t mode)
 {
-    uint8_t rc = false;
+    uint8_t rc = OK, val;
+
+	pca9533_bit_t* b = (pca9533_bit_t*)&_pca9533;
+
+	set_address(PCA9533_ADDRESS);
 
     if((led & PCA9533_LED0) == PCA9533_LED0)
-        pca9533_tbl.ls0.led0 = mode;
+        b->ls0.led0= mode;
     if((led & PCA9533_LED1) == PCA9533_LED1)
-        pca9533_tbl.ls0.led1 = mode;
+        b->ls0.led1 = mode;
     if((led & PCA9533_LED2) == PCA9533_LED2)
-        pca9533_tbl.ls0.led2 = mode;
+        b->ls0.led2 = mode;
     if((led & PCA9533_LED3) == PCA9533_LED3)
-        pca9533_tbl.ls0.led3 = mode;
+        b->ls0.led3 = mode;
 
-    #if 0
-    if(!i2c_write(i2c_dev->i2c.id, PCA9533_ADDR, PCA9533_REG_LS0, (u8*)&(pca9533_tbl.ls0), 0x01))
-        goto cleanup;
-	#endif
+    val = _pca9533.ls0;
+	rc = write_reg(PCA9533_REG_LS0, val);
 
-    rc = true;
+	if (OK != rc)
+		goto cleanup;
 
 cleanup:
     return rc;
@@ -424,41 +435,32 @@ cleanup:
 uint8_t
 PCA953X::pca9536_config_io(uint8_t io, uint8_t set)
 {
-    uint8_t rc = false;
+    uint8_t rc = OK, val;
+
+	pca9536_bit_t* b = (pca9536_bit_t*)&_pca9536;
+
+	set_address(PCA9536_ADDRESS);
 
     if((io & PCA9536_IO0) == PCA9536_IO0)
-        pca9536_tbl.config.cx0 = set;
+        b->config.cx0 = set;
     if((io & PCA9536_IO1) == PCA9536_IO1)
-        pca9536_tbl.config.cx1 = set;
+        b->config.cx1 = set;
     if((io & PCA9536_IO2) == PCA9536_IO2)
-        pca9536_tbl.config.cx2 = set;
+        b->config.cx2 = set;
     if((io & PCA9536_IO3) == PCA9536_IO3)
-        pca9536_tbl.config.cx3 = set;
+        b->config.cx3 = set;
 
-    #if 0
-    if(!i2c_write(i2c_dev->i2c.id, PCA9536_ADDR, PCA9536_REG_CONFIG, (u8*)&(pca9536_tbl.config), 0x01))
-        goto cleanup;
-	#endif
+    val = _pca9536.config;
+	rc = write_reg(PCA9536_REG_CONFIG, val);
 
-    rc = true;
+	if (OK != rc)
+		goto cleanup;
 
 cleanup:
     return rc;
 }
 
-int
-PCA953X::write_reg(uint8_t reg, uint8_t val)
-{
-	uint8_t cmd[] = { reg, val };
 
-	return transfer(&cmd[0], 2, nullptr, 0);
-}
-
-int
-PCA953X::read_reg(uint8_t reg, uint8_t &val)
-{
-	return transfer(&reg, 1, &val, 1);
-}
 
 /* for now, we only support one PCA953X */
 namespace
@@ -491,6 +493,11 @@ PCA953X::init()
 	/* do I2C init (and probe) first */
 	if (I2C::init() != OK)
 		goto out;
+
+    pca9533_set_led(PCA9533_LED0|
+		            PCA9533_LED1|
+		            PCA9533_LED2|
+		            PCA9533_LED3, PCA9533_LED_OFF);
 
 	ret = OK;
 
@@ -539,18 +546,21 @@ PCA953X::reset()
 void
 PCA953X::print_info()
 {
-	int ret;
+	errx(0, "print_info()");
+}
 
-	if (ret == OK) {
-		/* we don't care about power-save mode */
-		#if 0
-		log("state: %s", on ? "ON" : "OFF");
-		log("red: %u, green: %u, blue: %u", (unsigned)r, (unsigned)g, (unsigned)b);
-		#endif
-		;
-	} else {
-		warnx("failed to read pca953x");
-	}
+int
+PCA953X::write_reg(uint8_t reg, uint8_t val)
+{
+	uint8_t cmd[] = { reg, val };
+
+	return transfer(&cmd[0], 2, nullptr, 0);
+}
+
+int
+PCA953X::read_reg(uint8_t reg, uint8_t &val)
+{
+	return transfer(&reg, 1, &val, 1);
 }
 
 /**
