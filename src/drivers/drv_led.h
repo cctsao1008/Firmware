@@ -51,6 +51,18 @@
 #define _LED_BASE		0x2800
 
 /* LED colour codes */
+#if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+#include <arch/board/board.h>
+#define LED_AMBER		BOARD_LED1_BIT
+#define LED_BLUE		BOARD_LED2_BIT
+#define LED_GREEN       BOARD_LED3_BIT
+#define LED_RED			BOARD_LED4_BIT
+#define LED_RED_PWR  	BOARD_LED5_BIT
+
+#define LED_ON			_IOC(_LED_BASE, 0)
+#define LED_OFF			_IOC(_LED_BASE, 1)
+#define LED_TOGGLE		_IOC(_LED_BASE, 2)
+#else
 #define LED_AMBER		1
 #define LED_RED			1	/* some boards have red rather than amber */
 #define LED_BLUE		0
@@ -59,6 +71,7 @@
 #define LED_ON			_IOC(_LED_BASE, 0)
 #define LED_OFF			_IOC(_LED_BASE, 1)
 #define LED_TOGGLE		_IOC(_LED_BASE, 2)
+#endif
 
 __BEGIN_DECLS
 
@@ -66,5 +79,10 @@ __BEGIN_DECLS
  * Initialise the LED driver.
  */
 __EXPORT void drv_led_start(void);
+
+#if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+/* All LEDs controlled by PCA9533 and PCA9536 in TMR-FC via I2C */
+__EXPORT void drv_pca953x_start(void);
+#endif
 
 __END_DECLS

@@ -200,10 +200,19 @@ __EXPORT int nsh_archinitialize(void)
                NULL);
    #endif
 
+    /* All LEDs controlled by PCA9533 and PCA9536 in TMR-FC via I2C */
+    message("[boot] Initializing pca953x driver\n");
+    drv_pca953x_start();
+
     /* initial LED state */
+    message("[boot] Initializing generic LED driver\n");
     drv_led_start();
+
     led_off(LED_AMBER);
     led_off(LED_BLUE);
+
+    /* OS in running state */
+    led_on(LED_GREEN);
 
     #if defined(CONFIG_SPI_BITBANG) && defined(CONFIG_MMCSD_SPI)  /* Use SPI to access Micro SD card  */
     
@@ -220,8 +229,6 @@ __EXPORT int nsh_archinitialize(void)
     else
     {
         message("[boot] Successfully initialized soft SPI for the MMC/SD slot\n");
-        //message("[boot] Set SPI ferquency to 25000000Hz\n");
-        //SPI_SETFREQUENCY(spi, 25000000);
     }
 
     /* Bind the SPI device for the chip select to the slot */

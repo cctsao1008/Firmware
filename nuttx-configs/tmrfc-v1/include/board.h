@@ -160,17 +160,19 @@
  * way.  The following definitions are used to access individual LEDs.
  */
 
-/* LED index values for use with stm32_setled() */
-
-#define BOARD_LED1        0
-#define BOARD_LED2        1
-#define BOARD_LED3        2
-#define BOARD_LED4        3
-#define BOARD_LED5        4
+/* LED index values for use with stm32_setled()
+ *  All LEDs controlled by PCA9533 and PCA9536 in TMR-FC via I2C
+ */
+ 
+#define BOARD_LED1        0 /* PCA9533 LED0 : AMBER */
+#define BOARD_LED2        1 /* PCA9533 LED1 : BLUE */
+#define BOARD_LED3        2 /* PCA9533 LED2 : GREEN ( ON, OS in running state )*/
+#define BOARD_LED4        3 /* PCA9533 LED3 : RED     */
+#define BOARD_LED5        3 /* PCA9536 IO3   : RED ( Power ON ) */
 #define BOARD_NLEDS       5
 
 #define BOARD_LED_BLUE    BOARD_LED1
-#define BOARD_LED_RED     BOARD_LED2
+#define BOARD_LED_RED     BOARD_LED3
 
 /* LED bits for use with stm32_setleds() */
 

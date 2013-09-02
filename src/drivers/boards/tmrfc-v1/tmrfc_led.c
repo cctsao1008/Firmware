@@ -40,11 +40,21 @@
 #include <nuttx/config.h>
 
 #include <stdbool.h>
+#include <fcntl.h>
+
+#include <systemlib/err.h>
 
 #include "stm32.h"
 #include "board_config.h"
 
 #include <arch/board/board.h>
+
+#include <drivers/drv_led.h>
+
+#define _LED_BASE       0x2800
+#define LED_ON          _IOC(_LED_BASE, 0)
+#define LED_OFF         _IOC(_LED_BASE, 1)
+#define LED_TOGGLE      _IOC(_LED_BASE, 2)
 
 /*
  * Ideally we'd be able to get these from up_internal.h,
@@ -60,75 +70,94 @@ extern void led_off(int led);
 extern void led_toggle(int led);
 __END_DECLS
 
+int fd;
+
 __EXPORT void led_init()
 {
-    /* Configure LED1-4 for output */
-	
+    /* Configure LED1-5 for output */
+    fd = open(PCA953X_DEVICE_PATH, O_RDONLY);
 }
 
 __EXPORT void led_on(int led)
 {
-    if (led == 0)
+    if (led == BOARD_LED1_BIT)
     {
-
+        ioctl(fd, LED_ON, BOARD_LED1_BIT);
     }
     
-    if (led == 1)
+    if (led == BOARD_LED2_BIT)
     {
-
+        ioctl(fd, LED_ON, BOARD_LED2_BIT);
     }
     
-    if (led == 2)
+    if (led == BOARD_LED3_BIT)
     {
-
+        ioctl(fd, LED_ON, BOARD_LED3_BIT);
     }
     
-    if (led == 3)
+    if (led == BOARD_LED4_BIT)
     {
+        ioctl(fd, LED_ON, BOARD_LED4_BIT);
+    }
 
+    if (led == BOARD_LED5_BIT)
+    {
+        ioctl(fd, LED_ON, BOARD_LED5_BIT);
     }
 }
 
 __EXPORT void led_off(int led)
 {
-    if (led == 0)
+    if (led == BOARD_LED1_BIT)
     {
-    
+        ioctl(fd, LED_OFF, BOARD_LED1_BIT);
     }
     
-    if (led == 1)
+    if (led == BOARD_LED2_BIT)
     {
-	}
-	
-	if (led == 2)
-    {
-
+        ioctl(fd, LED_OFF, BOARD_LED2_BIT);
     }
     
-    if (led == 3)
+    if (led == BOARD_LED3_BIT)
     {
+        ioctl(fd, LED_OFF, BOARD_LED3_BIT);
+    }
+    
+    if (led == BOARD_LED4_BIT)
+    {
+        ioctl(fd, LED_OFF, BOARD_LED4_BIT);
+    }
 
+    if (led == BOARD_LED5_BIT)
+    {
+        ioctl(fd, LED_OFF, BOARD_LED5_BIT);
     }
 }
     
 __EXPORT void led_toggle(int led)
 {
-	if (led == 0)
-	{
-    
-	}
-	if (led == 1)
-	{
-    
-	}
-	
-	if (led == 2)
+    if (led == BOARD_LED1_BIT)
     {
-
+        ioctl(fd, LED_TOGGLE, BOARD_LED1_BIT);
     }
     
-    if (led == 3)
+    if (led == BOARD_LED2)
     {
+        ioctl(fd, LED_TOGGLE, BOARD_LED2_BIT);
+    }
+    
+    if (led == BOARD_LED3)
+    {
+        ioctl(fd, LED_TOGGLE, BOARD_LED3_BIT);
+    }
+    
+    if (led == BOARD_LED4)
+    {
+        ioctl(fd, LED_TOGGLE, BOARD_LED4_BIT);
+    }
 
+    if (led == BOARD_LED5)
+    {
+        ioctl(fd, LED_TOGGLE, BOARD_LED5_BIT);
     }
 }
