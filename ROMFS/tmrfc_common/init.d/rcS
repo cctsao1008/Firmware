@@ -1,26 +1,28 @@
 #!nsh
 #
-# TMRFC startup script.
+# TMRFC start-up script.
 
 #
 # Default to auto-start mode.  An init script on the microSD card
-# can change this to prevent automatic startup of the flight script.
+# can change this to prevent automatic start-up of the flight script.
 #
 set MODE autostart
+echo "[init] MODE ="$MODE
 
 #
 # Try to mount the microSD card.
 #
-echo "[init] looking for microSD..."
+echo "[init] Looking for microSD..."
 if mount -t vfat /dev/mmcsd0 /fs/microsd
 then
-	echo "[init] card mounted at /fs/microsd"
+	echo "[init] Card mounted at /fs/microsd"
 	# Start playing the startup tune
-	tone_alarm start
+	echo "[init] tone_alarm start > will change to use Beeper"
+	#tone_alarm start > will change to use Beeper.
 else
-	echo "[init] no microSD card found"
+	echo "[init] No microSD card found"
 	# Play SOS
-	tone_alarm 2
+	#tone_alarm 2 > will change to use Beeper.
 fi
 
 #
@@ -31,13 +33,13 @@ fi
 #
 if [ -f /fs/microsd/etc/rc ]
 then
-	echo "[init] reading /fs/microsd/etc/rc"
+	echo "[init] Reading /fs/microsd/etc/rc"
 	sh /fs/microsd/etc/rc
 fi
 # Also consider rc.txt files
 if [ -f /fs/microsd/etc/rc.txt ]
 then
-	echo "[init] reading /fs/microsd/etc/rc.txt"
+	echo "[init] Reading /fs/microsd/etc/rc.txt"
 	sh /fs/microsd/etc/rc.txt
 fi
 
@@ -57,6 +59,7 @@ then
 	#
 	# Start the ORB (first app to start)
 	#
+	echo "[init] Start the ORB"
 	uorb start
 	
 	#
@@ -67,31 +70,16 @@ then
 		param select /ramtron/params
 		if [ -f /ramtron/params ]
 		then
+			echo "[init] param load /ramtron/params"
 			param load /ramtron/params
 		fi
 	else
 		param select /fs/microsd/params
 		if [ -f /fs/microsd/params ]
 		then
+			echo "[init] param load /fs/microsd/params"
 			param load /fs/microsd/params
 		fi
-	fi
-
-	# Try to get an USB console
-	nshterm /dev/ttyACM0 &
-	
-	#
-	# Upgrade PX4IO firmware
-	#
-	if px4io update
-	then
-		if [ -d /fs/microsd ]
-		then
-			echo "Flashed PX4IO Firmware OK" > /fs/microsd/px4io.log
-		fi
-
-		# Allow IO to safely kick back to app
-		usleep 200000
 	fi
 	
 	#
@@ -108,6 +96,7 @@ then
 	# Start any custom extensions that might be missing
 	if [ -f /fs/microsd/etc/rc.local ]
 	then
+		echo "[init] Reading /fs/microsd/etc/rc.local"
 		sh /fs/microsd/etc/rc.local
 	fi
 	
@@ -115,30 +104,30 @@ then
 	if [ $MODE == autostart ]
 	then
 		# Telemetry port is on both FMU boards ttyS1
+		echo "[init] Start mavlink ( 57600  /dev/ttyS1 )"
 		mavlink start -b 57600 -d /dev/ttyS1
 		usleep 5000
 	
 		# Start commander
+		echo "[init] Start commander"
 		commander start
 	
-		# Start px4io if present
-		if px4io detect
+		# Start TMRFC
+		if fmu mode_serial
 		then
-			px4io start
-		else
-			if fmu mode_serial
-			then
-				echo "FMU driver (no PWM) started"
-			fi
+			echo "FMU driver (no PWM) started"
 		fi
 	
 		# Start sensors
+		echo "[init] Start sensors"
 		sh /etc/init.d/rc.sensors
 	
 		# Start one of the estimators
+		echo "[init] Start one of the estimators ( attitude_estimator_ekf )"
 		attitude_estimator_ekf start
 	
 		# Start GPS
+		echo "[init] Start GPS"
 		gps start
 	
 	fi
