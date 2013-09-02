@@ -269,7 +269,7 @@ void usage(const char *reason)
 	if (reason)
 		fprintf(stderr, "%s\n", reason);
 
-	fprintf(stderr, "usage: daemon {start|stop|status} [-p <additional params>]\n\n");
+	fprintf(stderr, "usage: commander {start|stop|status} [-p <additional params>]\n\n");
 	exit(1);
 }
 
