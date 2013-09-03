@@ -216,8 +216,8 @@ static const int ERROR = -1;
 class PCA953X : public device::I2C
 {
 public:
-    PCA953X(int bus);
-    virtual ~PCA953X();
+                    PCA953X(int bus);
+    virtual         ~PCA953X();
     virtual int     init();
     virtual int     ioctl(struct file *filp, int cmd, unsigned long arg);
 
@@ -235,10 +235,12 @@ private:
     pca9533_t _pca9533;
     pca9536_t _pca9536;
 
-    int         _bus;           /**< the bus the device is connected to */
+    int       _bus;           /**< the bus the device is connected to */
 
-    uint8_t     _pca9533_duty[2];  /* unit in percentage ( % ) */
-    uint32_t     _pca9533_peroid[2];  /* unit in micro second ( ms ) */
+    uint8_t   _pca9533_duty[2];  /* unit in percentage ( % ) */
+    uint32_t  _pca9533_peroid[2];  /* unit in micro second ( ms ) */
+
+	uint8_t   _test_mode;
 
     /**
      * Initialise the automatic measurement state machine and start it.
@@ -246,21 +248,23 @@ private:
      * @note This function is called at open and error time.  It might make sense
      *       to make it more aggressive about resetting the bus in case of errors.
      */
-    void            start();
+    void    start();
 
     /**
      * Stop the automatic measurement state machine.
      */
-    void            stop();
+    void    stop();
 
     /**
      * Reset the device
      */
-    int         reset();
+    int     reset();
     uint8_t pca953x_read_all(void);
     uint8_t pca953x_update(uint8_t pca_id);
-    uint8_t pca9533_set_peroid(uint8_t psc, uint32_t msec);
-    uint8_t pca9533_set_pwm(uint8_t pwm, uint32_t duty);
+    uint8_t pca9533_set_peroid(uint8_t psc, uint32_t  msec);
+	uint8_t pca9533_get_peroid(uint8_t psc, uint32_t &msec);
+    uint8_t pca9533_set_duty(uint8_t pwm, uint32_t  duty);
+	uint8_t pca9533_get_duty(uint8_t pwm, uint32_t &duty);
     uint8_t pca9533_set_led(uint8_t led, uint32_t mode);
     uint8_t pca9536_config_io(uint8_t io, uint8_t set);
 
@@ -271,7 +275,7 @@ private:
      * @param val       The value to write.
      * @return      OK on write success.
      */
-    int         write_reg(uint8_t reg, uint8_t val);
+    int     write_reg(uint8_t reg, uint8_t val);
 
     /**
      * Read a register.
@@ -280,7 +284,7 @@ private:
      * @param val       The value read.
      * @return      OK on read success.
      */
-    int         read_reg(uint8_t reg, uint8_t &val);
+    int     read_reg(uint8_t reg, uint8_t &val);
 
 };
 
@@ -406,7 +410,7 @@ cleanup:
 }
 
 uint8_t
-PCA953X::pca9533_set_pwm(uint8_t pwm, uint32_t duty)
+PCA953X::pca9533_set_duty(uint8_t pwm, uint32_t duty)
 {
     uint8_t rc = OK;
     int8_t data = 0;
