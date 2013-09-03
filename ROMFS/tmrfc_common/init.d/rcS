@@ -119,16 +119,16 @@ then
 		fi
 	
 		# Start sensors
-		echo "[init] Start sensors"
-		sh /etc/init.d/rc.sensors
+		echo "[init] Start sensors >> need to implement"
+		#sh /etc/init.d/rc.sensors
 	
 		# Start one of the estimators
-		echo "[init] Start one of the estimators ( attitude_estimator_ekf )"
-		attitude_estimator_ekf start
+		echo "[init] Start one of the estimators ( attitude_estimator_ekf ) >> all sensors need  to be implemented and then we can test it"
+		#attitude_estimator_ekf start
 	
 		# Start GPS
-		echo "[init] Start GPS"
-		gps start
+		echo "[init] Start GPS >> need to implement"
+		#gps start
 	
 	fi
 # End of autostart
