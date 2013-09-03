@@ -103,7 +103,7 @@ then
 	# If none of the autostart scripts triggered, get a minimal setup
 	if [ $MODE == autostart ]
 	then
-		# Telemetry port is on both FMU boards ttyS1
+		# Telemetry port is on both FC boards ttyS1
 		echo "[init] Start mavlink ( 57600  /dev/ttyS1 )"
 		mavlink start -b 57600 -d /dev/ttyS1
 		usleep 5000
@@ -113,9 +113,9 @@ then
 		commander start
 	
 		# Start TMRFC
-		if fmu mode_serial
+		if fc mode_serial
 		then
-			echo "FMU driver (no PWM) started"
+			echo "FC driver (no PWM) started"
 		fi
 	
 		# Start sensors
