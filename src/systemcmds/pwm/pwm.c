@@ -243,7 +243,6 @@ pwm_main(int argc, char *argv[])
 			ret = ioctl(fd, PWM_SERVO_GET_RATEGROUP(i), (unsigned long)&group_mask);
 			if (ret != OK)
 				break;
-		    printf("\n");
 			if (group_mask != 0) {
 				printf("Channel Group %-2u: Channels", i);
 				for (unsigned j = 0; j < 32; j++)
