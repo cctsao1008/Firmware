@@ -237,6 +237,9 @@ private:
 
     int         _bus;           /**< the bus the device is connected to */
 
+    uint8_t     _pca9533_duty[2];  /* unit in percentage ( % ) */
+    uint32_t     _pca9533_peroid[2];  /* unit in micro second ( ms ) */
+
     /**
      * Initialise the automatic measurement state machine and start it.
      *
@@ -344,13 +347,20 @@ PCA953X::pca9533_set_peroid(uint8_t psc, uint32_t msec)
 {
     uint8_t rc = OK, data = 0;
 
+    #if defined(PCA953X_DEBUG)
+    printf("[PCA953X] PCA953X::pca9533_set_peroid, psc = 0x%X, msec = 0x%X \n", psc, msec);
+    #endif
+
     if(msec < MIN_MSEC) // min_msev
-        data = 0;
+        data = 0x0;
+    else if(msec > MAX_MSEC)
+        data = 0xFF;
+    else
+        data = (uint8_t)((float)msec * 0.152f) - 1;
 
-    if(msec > MAX_MSEC)
-        data = 255;
-
-    data = (uint8_t)((float)msec * 0.152f) - 1;
+    #if defined(PCA953X_DEBUG)
+    printf("[PCA953X] PCA953X::pca9533_set_peroid, data = 0x%X \n", data);
+    #endif
 
     set_address(PCA9533_ADDRESS);
 
@@ -362,9 +372,14 @@ PCA953X::pca9533_set_peroid(uint8_t psc, uint32_t msec)
             goto cleanup;
 
         // save old psc0
-        rc = _pca9533.psc0;
-        // update table
+        //rc = _pca9533.psc0;
+        
+        /* update table */
         _pca9533.psc0 = data;
+
+        #if defined(PCA953X_DEBUG)
+        printf("[PCA953X] PCA953X::pca9533_set_peroid, _pca9533.psc0 = 0x%X \n", _pca9533.psc0);
+        #endif
     }
     
     if(psc == PCA9533_REG_PSC1)
@@ -376,9 +391,14 @@ PCA953X::pca9533_set_peroid(uint8_t psc, uint32_t msec)
         
 
         // save old psc1
-        rc = _pca9533.psc1;
-        // update table
+        //rc = _pca9533.psc1;
+        
+        /* update table */
         _pca9533.psc1 = data;
+
+        #if defined(PCA953X_DEBUG)
+        printf("[PCA953X] PCA953X::pca9533_set_peroid, _pca9533.psc1 = 0x%X \n", _pca9533.psc1);
+        #endif
     }
 
 cleanup:
@@ -558,6 +578,9 @@ PCA953X::ioctl(struct file *filp, int cmd, unsigned long arg)
 {
     int rc = OK;
 
+    uint8_t ledx = 0;
+    uint32_t msec = ((arg & 0xFFF000) >> 12);
+
     pca9533_bit_t* b33 = (pca9533_bit_t*)&_pca9533;
     pca9536_bit_t* b36 = (pca9536_bit_t*)&_pca9536;
 
@@ -658,6 +681,21 @@ PCA953X::ioctl(struct file *filp, int cmd, unsigned long arg)
                 #if defined(PCA953X_DEBUG)
                 printf("[PCA953X] LED_TOGGLE LED2 \n");
                 #endif
+
+                if(((b33->ls0.led1) != PCA9533_LED_PWM1) || (msec != _pca9533_peroid[1]))
+                {
+                    _pca9533_peroid[1] = msec;
+
+                    pca9533_set_peroid(PCA9533_REG_PSC1, msec);
+
+                    if(pca9533_set_led(arg & 0xF, PCA9533_LED_PWM1) != OK)
+                    {    rc = EIO; goto cleanup;}
+
+                    break;
+                }
+                else
+                    break;
+
                 if(pca9533_set_led(arg & 0xF, ((b33->ls0.led1) ^= (1 << 0))) != OK)
                 {    rc = EIO; goto cleanup;}
             }
@@ -674,6 +712,21 @@ PCA953X::ioctl(struct file *filp, int cmd, unsigned long arg)
                 #if defined(PCA953X_DEBUG)
                 printf("[PCA953X] LED_TOGGLE LED4 \n");
                 #endif
+
+                if(((b33->ls0.led3) != PCA9533_LED_PWM1) || (msec != _pca9533_peroid[1]))
+                {
+                    _pca9533_peroid[1] = msec;
+
+                    pca9533_set_peroid(PCA9533_REG_PSC1, msec);
+
+                    if(pca9533_set_led(arg & 0xF, PCA9533_LED_PWM1) != OK)
+                    {    rc = EIO; goto cleanup;}
+
+                    break;
+                }
+                else
+                    break;
+
                 if(pca9533_set_led(arg & 0xF, ((b33->ls0.led3) ^= (1 << 0))) != OK)
                 {    rc = EIO; goto cleanup;}
             }
@@ -725,25 +778,39 @@ PCA953X::reset()
 void
 PCA953X::print_info()
 {
+    pca9533_bit_t* b33 = (pca9533_bit_t*)&_pca9533;
+    pca9536_bit_t* b36 = (pca9536_bit_t*)&_pca9536;
+
     pca953x_read_all();
         
-    printf("---------------------------\n");
-    printf("PCA9533                    \n");
-    printf("---------------------------\n");
-    printf("INPUT               0x%02X \n", _pca9533.input);
-    printf("PSC0                0x%02X \n", _pca9533.psc0);
-    printf("PWM0                0x%02X \n", _pca9533.pwm0);
-    printf("PSC1                0x%02X \n", _pca9533.psc1);
-    printf("PWM1                0x%02X \n", _pca9533.pwm1);
-    printf("LS0                 0x%02X \n", _pca9533.ls0);
-    printf("---------------------------\n");
-    printf("PCA9536                    \n");
-    printf("---------------------------\n");
-    printf("INPUT               0x%02X \n", _pca9536.input);
-    printf("OUTPUT              0x%02X \n", _pca9536.output);
-    printf("POLARITY            0x%02X \n", _pca9536.polarity);
-    printf("CONFIG              0x%02X \n", _pca9536.config);
-    printf("---------------------------\n");
+    printf("  ---------------------------\n");
+    printf("  PCA9533                    \n");
+    printf("  ---------------------------\n");
+    printf("                             \n");
+    printf("  INPUT               0x%02X \n", _pca9533.input);
+    printf("  PSC0                0x%02X \n", _pca9533.psc0);
+    printf("  PWM0                0x%02X \n", _pca9533.pwm0);
+    printf("  PSC1                0x%02X \n", _pca9533.psc1);
+    printf("  PWM1                0x%02X \n", _pca9533.pwm1);
+    printf("  LS0                 0x%02X \n", _pca9533.ls0);
+    printf("                             \n");
+    printf("  LED Mode:                  \n");
+    printf("                             \n");
+    printf("    LED0               0x%X  \n", b33->ls0.led0);
+    printf("    LED1               0x%X  \n", b33->ls0.led1);
+    printf("    LED2               0x%X  \n", b33->ls0.led2);
+    printf("    LED3               0x%X  \n", b33->ls0.led3);
+    printf("                             \n");
+    printf("  ---------------------------\n");
+    printf("  PCA9536                    \n");
+    printf("  ---------------------------\n");
+    printf("                             \n");
+    printf("  INPUT               0x%02X \n", _pca9536.input);
+    printf("  OUTPUT              0x%02X \n", _pca9536.output);
+    printf("  POLARITY            0x%02X \n", _pca9536.polarity);
+    printf("  CONFIG              0x%02X \n", _pca9536.config);
+    printf("                             \n");
+    printf("  ---------------------------\n");
 }
 
 int

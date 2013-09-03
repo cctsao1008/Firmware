@@ -103,12 +103,12 @@
 #define LED_OFF			_IOC(_LED_BASE, 1)
 #define LED_TOGGLE		_IOC(_LED_BASE, 2)
 
-#define LED_BLINK_1HZ  	((1000 * 2) << 12)
-#define LED_BLINK_2HZ  	((500  * 2) << 12)
-#define LED_BLINK_4HZ  	((250  * 2) << 12)
-#define LED_BLINK_8HZ  	((125  * 2) << 12)
-#define LED_BLINK_10HZ  ((100  * 2) << 12)
-#define LED_BLINK_20HZ  ((50   * 2) << 12)
+#define LED_BLINK_1HZ  	((1000 *2) << 12)
+#define LED_BLINK_2HZ  	((500  *2) << 12)
+#define LED_BLINK_4HZ  	((250  *2) << 12)
+#define LED_BLINK_8HZ  	((125  *2) << 12)
+#define LED_BLINK_10HZ  ((100  *2) << 12)
+#define LED_BLINK_20HZ  ((50   *2) << 12)
 #else
 #define LED_AMBER		1
 #define LED_RED			1	/* some boards have red rather than amber */
