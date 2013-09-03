@@ -881,8 +881,12 @@ HMC5883::collect()
      *        74 from all measurements centers them around zero.
      */
 
-#ifdef PX4_I2C_BUS_ONBOARD
+#if defined(PX4_I2C_BUS_ONBOARD) || defined(TMR_I2C_BUS_ONBOARD)
+    #ifdef TMR_I2C_BUS_ONBOARD
+    if (_bus == TMR_I2C_BUS_ONBOARD) {
+	#else
     if (_bus == PX4_I2C_BUS_ONBOARD) {
+	#endif
         /* to align the sensor axes with the board, x and y need to be flipped */
         _reports[_next_report].x = ((report.y * _range_scale) - _scale.x_offset) * _scale.x_scale;
         /* flip axes and negate value for y */
@@ -898,7 +902,7 @@ HMC5883::collect()
         _reports[_next_report].y = ((report.x * _range_scale) - _scale.y_offset) * _scale.y_scale;
         /* z remains z */
         _reports[_next_report].z = ((report.z * _range_scale) - _scale.z_offset) * _scale.z_scale;
-#ifdef PX4_I2C_BUS_ONBOARD
+#if defined(PX4_I2C_BUS_ONBOARD) || defined(TMR_I2C_BUS_ONBOARD)
     }
 #endif
 
@@ -1276,32 +1280,19 @@ start()
         g_dev = nullptr;
     }
 
-    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
-
-    #ifdef TMR_I2C_BUS_ONBOARD
+    #if defined(PX4_I2C_BUS_ONBOARD) || defined(TMR_I2C_BUS_ONBOARD)
     /* if this failed, attempt onboard sensor */
     if (g_dev == nullptr) {
+		#ifdef TMR_I2C_BUS_ONBOARD
         g_dev = new HMC5883(TMR_I2C_BUS_ONBOARD);
-        if (g_dev != nullptr && OK != g_dev->init()) {
-            goto fail;
-        }
-    }
-    #endif
-
-    #else
-
-    #ifdef PX4_I2C_BUS_ONBOARD
-    /* if this failed, attempt onboard sensor */
-    if (g_dev == nullptr) {
+		#else
         g_dev = new HMC5883(PX4_I2C_BUS_ONBOARD);
+		#endif
         if (g_dev != nullptr && OK != g_dev->init()) {
             goto fail;
         }
     }
     #endif
-
-    #endif
-
 
     if (g_dev == nullptr)
         goto fail;
