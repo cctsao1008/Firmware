@@ -20,7 +20,7 @@ then
 else
 	echo "[init] no microSD card found"
 	# Play SOS
-	tone_alarm 2
+	tone_alarm error
 fi
 
 #
@@ -63,9 +63,8 @@ then
 	if sercon
 	then
 		echo "USB connected"
-	else
-		# second attempt
-		sercon &
+		sleep 3
+		mavlink start -d /dev/ttyACM0 -b 230400
 	fi
 	
 	#
@@ -105,20 +104,28 @@ then
 	fi
 
 	# Try to get an USB console
-	nshterm /dev/ttyACM0 &
+	#nshterm /dev/ttyACM0 &
 	
 	#
 	# Upgrade PX4IO firmware
 	#
-	if px4io update
+	if px4io detect
 	then
-		if [ -d /fs/microsd ]
+		echo "PX4IO running, not upgrading"
+	else
+		echo "Attempting to upgrade PX4IO"
+		if px4io update
 		then
-			echo "Flashed PX4IO Firmware OK" > /fs/microsd/px4io.log
-		fi
+			if [ -d /fs/microsd ]
+			then
+				echo "Flashed PX4IO Firmware OK" > /fs/microsd/px4io.log
+			fi
 
-		# Allow IO to safely kick back to app
-		usleep 200000
+			# Allow IO to safely kick back to app
+			usleep 200000
+		else
+			echo "No PX4IO to upgrade here"
+		fi
 	fi
 	
 	#
@@ -211,5 +218,6 @@ then
 		gps start
 	
 	fi
+
 # End of autostart
 fi
