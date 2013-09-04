@@ -46,6 +46,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/usb/usbdev_trace.h>
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -292,4 +293,40 @@ __EXPORT int nsh_archinitialize(void)
     }
 
     return OK;
+}
+
+__EXPORT int composite_archinitialize(void)
+{
+    return OK;
+}
+
+__EXPORT int cdcacm_initialize(int minor, FAR void **handle)
+{
+   FAR struct usbdevclass_driver_s *drvr = NULL;
+  int ret;
+
+  /* Get an instance of the serial driver class object */
+
+  ret = cdcacm_classobject(minor, &drvr);
+  if (ret == OK)
+    {
+      /* Register the USB serial class driver */
+
+      ret = usbdev_register(drvr);
+      if (ret < 0)
+        {
+          usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_DEVREGISTER), (uint16_t)-ret);
+        }
+    }
+
+  /* Return the driver instance (if any) if the caller has requested it
+   * by provided a pointer to the location to return it.
+   */
+
+  if (handle)
+    {
+      *handle = (FAR void*)drvr;
+    }
+
+  return ret;
 }
