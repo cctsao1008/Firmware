@@ -852,22 +852,15 @@ beep_tim_init(void)
     /* disable and configure the timer */
     rCR1 = 0;
     rCR2 = 0;
-    //rSMCR = 0;
+
     rDIER = GTIM_DIER_UIE;
-    //rCCER = 0;        /* unlock CCMR* registers */
-    //rCCMR1 = CCMR1_PPM;
-    //rCCMR2 = CCMR2_PPM;
-    //rCCER = CCER_PPM;
     rDCR = 0;
 
-    /* configure the timer to free-run at 42MHz */
+    /* configure the timer to free-run at 84MHz */
     rPSC = (BEEP_TIMER_CLOCK / 84000000) - 1;   /* this really only works for whole-MHz clocks */
 
     /* run the full span of the counter */
     rARR = 0xffff;
-
-    /* set an initial capture a little ways off */
-    //rCCR_HRT = 1000;
 
     /* generate an update event; reloads the counter, all registers */
     rEGR = GTIM_EGR_UG;
