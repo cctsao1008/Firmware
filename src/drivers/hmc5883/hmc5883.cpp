@@ -386,11 +386,11 @@ HMC5883::init()
     _num_reports = 2;
     _reports = new struct mag_report[_num_reports];
 
-	if (_reports == nullptr) {
-		debug("can't get memory for reports");
-		ret = -ENOMEM;
-		goto out;
-	}
+    if (_reports == nullptr) {
+        debug("can't get memory for reports");
+        ret = -ENOMEM;
+        goto out;
+    }
 
     _oldest_report = _next_report = 0;
 
@@ -400,9 +400,9 @@ HMC5883::init()
 
     if (_mag_topic < 0) {
         debug("failed to create sensor_mag object");
-		ret = -ENOSPC;
-		goto out;
-	}
+        ret = -ENOSPC;
+        goto out;
+    }
 
     ret = OK;
     /* sensor is ok, but not calibrated */
@@ -504,12 +504,11 @@ HMC5883::read(struct file *filp, char *buffer, size_t buflen)
 {
     unsigned count = buflen / sizeof(struct mag_report);
     int ret = 0;
-printf("1 %X %d %d %d\n",count, buflen, sizeof(struct mag_report), _measure_ticks);
 
     /* buffer must be large enough */
     if (count < 1)
         return -ENOSPC;
-printf("2\n");
+
     /* if automatic measurement is enabled */
     if (_measure_ticks > 0) {
 
@@ -519,18 +518,17 @@ printf("2\n");
          * we are careful to avoid racing with them.
          */
         while (count--) {
-			printf(" count = %d\n", count);
             if (_oldest_report != _next_report) {
                 memcpy(buffer, _reports + _oldest_report, sizeof(*_reports));
                 ret += sizeof(_reports[0]);
                 INCREMENT(_oldest_report, _num_reports);
             }
         }
-printf("2-1 count = %d, ret = %X, _oldest_report = %X, _next_report = %X, %d \n",count, ret, _oldest_report, _next_report, sizeof(_reports[0]));
+
         /* if there was no data, warn the caller */
         return ret ? ret : -EAGAIN;
     }
-printf("3\n");
+
     /* manual measurement - run one conversion */
     /* XXX really it'd be nice to lock against other readers here */
     do {
@@ -538,7 +536,6 @@ printf("3\n");
 
         /* trigger a measurement */
         if (OK != measure()) {
-			printf("4\n");
             ret = -EIO;
             break;
         }
@@ -548,7 +545,6 @@ printf("3\n");
 
         /* run the collection phase */
         if (OK != collect()) {
-			printf("5\n");
             ret = -EIO;
             break;
         }
@@ -894,9 +890,9 @@ HMC5883::collect()
 #if defined(PX4_I2C_BUS_ONBOARD) || defined(TMR_I2C_BUS_ONBOARD)
     #ifdef TMR_I2C_BUS_ONBOARD
     if (_bus == TMR_I2C_BUS_ONBOARD) {
-	#else
+    #else
     if (_bus == PX4_I2C_BUS_ONBOARD) {
-	#endif
+    #endif
         /* to align the sensor axes with the board, x and y need to be flipped */
         _reports[_next_report].x = ((report.y * _range_scale) - _scale.x_offset) * _scale.x_scale;
         /* flip axes and negate value for y */
@@ -1293,11 +1289,11 @@ start()
     #if defined(PX4_I2C_BUS_ONBOARD) || defined(TMR_I2C_BUS_ONBOARD)
     /* if this failed, attempt onboard sensor */
     if (g_dev == nullptr) {
-		#ifdef TMR_I2C_BUS_ONBOARD
+        #ifdef TMR_I2C_BUS_ONBOARD
         g_dev = new HMC5883(TMR_I2C_BUS_ONBOARD);
-		#else
+        #else
         g_dev = new HMC5883(PX4_I2C_BUS_ONBOARD);
-		#endif
+        #endif
         if (g_dev != nullptr && OK != g_dev->init()) {
             goto fail;
         }
