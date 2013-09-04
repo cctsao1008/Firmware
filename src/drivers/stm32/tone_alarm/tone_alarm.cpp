@@ -87,7 +87,7 @@
  */
 
 #include <nuttx/config.h>
-#ifdef CONFIG_ARCH_BOARD_TMRFC_V1
+#if defined(CONFIG_ARCH_BOARD_TMRFC_V1) && defined(GPIO_BEEP_ALARM_ENABLE)
 #include <nuttx/arch.h>
 #endif
 #include <debug.h>
@@ -478,7 +478,7 @@ ToneAlarm::start_note(unsigned note)
     // configure the GPIO to enable timer output
     stm32_configgpio(GPIO_TONE_ALARM);
 
-    #ifdef CONFIG_ARCH_BOARD_TMRFC_V1
+    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1) && defined(GPIO_BEEP_ALARM_ENABLE)
     up_enable_irq(BEEP_TIMER_VECTOR);
     #endif
 }
@@ -494,7 +494,7 @@ ToneAlarm::stop_note()
      */
     stm32_configgpio(GPIO_TONE_ALARM_IDLE);
 
-    #ifdef CONFIG_ARCH_BOARD_TMRFC_V1
+    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1) && defined(GPIO_BEEP_ALARM_ENABLE)
     stm32_configgpio(GPIO_BEEP_ALARM);
     up_disable_irq(BEEP_TIMER_VECTOR);
     #endif
@@ -827,7 +827,7 @@ namespace
 
 ToneAlarm   *g_dev;
 
-#ifdef CONFIG_ARCH_BOARD_TMRFC_V1
+#if defined(CONFIG_ARCH_BOARD_TMRFC_V1) && defined(GPIO_BEEP_ALARM_ENABLE)
 /*
  * Timer register accessors
  */
@@ -949,7 +949,7 @@ tone_alarm_main(int argc, char *argv[])
             delete g_dev;
             errx(1, "ToneAlarm init failed");
         }
-        #ifdef CONFIG_ARCH_BOARD_TMRFC_V1
+        #if defined(CONFIG_ARCH_BOARD_TMRFC_V1) && defined(GPIO_BEEP_ALARM_ENABLE)
         else
         {
             /* claim our interrupt vector */
