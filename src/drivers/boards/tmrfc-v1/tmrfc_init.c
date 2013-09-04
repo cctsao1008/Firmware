@@ -173,11 +173,16 @@ __EXPORT int nsh_archinitialize(void)
     /* IN12 and IN13 further below */
     #endif
 
+    message("[boot] Initializing (HRT) 1...\n");
+    usleep(200000);
+
     /* configure the high-resolution time/callout interface */
     hrt_init();
 
     /* configure CPU load estimation */
     #ifdef CONFIG_SCHED_INSTRUMENTATION
+    message("[boot] Initializing (CPU) 2...\n");
+    usleep(200000);
     cpuload_initialize_once();
     #endif
 
@@ -192,7 +197,9 @@ __EXPORT int nsh_archinitialize(void)
     ts.tv_sec = 0;
     ts.tv_nsec = 1000000;
 
-   #ifdef SERIAL_HAVE_DMA
+    #ifdef SERIAL_HAVE_DMA
+    message("[boot] Initializing (DMA) 3...\n");
+    usleep(200000);
     hrt_call_every(&serial_dma_call,
                ts_to_abstime(&ts),
                ts_to_abstime(&ts),
@@ -205,10 +212,9 @@ __EXPORT int nsh_archinitialize(void)
     message("[boot] Initializing pca953x driver\n");
     drv_pca953x_start();
 
-    /* initial LED state */
-    message("[boot] Initializing generic LED driver\n");
-
     #if 0 /* disable original LED driver (led.cpp), because it don't work, don't know why it?? */
+    /* initial LED state */
+    message("[boot] Initializing Generic LED driver\n");
     drv_led_start();
     #endif
 

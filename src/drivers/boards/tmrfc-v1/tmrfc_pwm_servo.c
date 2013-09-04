@@ -57,12 +57,14 @@
 #define TIM8_INDEX 4
 
 __EXPORT const struct pwm_servo_timer pwm_timers[PWM_SERVO_MAX_TIMERS] = {
+#if defined(GPIO_TIM2_CH1OUT)
     {
         .base = STM32_TIM2_BASE,
         .clock_register = STM32_RCC_APB1ENR,
         .clock_bit = RCC_APB1ENR_TIM2EN,
         .clock_freq = STM32_APB1_TIM2_CLKIN
     },
+#endif
     {
         .base = STM32_TIM3_BASE,
         .clock_register = STM32_RCC_APB1ENR,
@@ -156,12 +158,14 @@ __EXPORT const struct pwm_servo_channel pwm_channels[PWM_SERVO_MAX_CHANNELS] = {
         .timer_channel = 3,
         .default_value = 1000,
     },
+#if defined(GPIO_TIM2_CH1OUT)
     {
         .gpio = GPIO_TIM2_CH1OUT,
         .timer_index = TIM2_INDEX,
         .timer_channel = 1,
         .default_value = 1000,
     },
+#endif
     {
         .gpio = GPIO_TIM8_CH1OUT,
         .timer_index = TIM8_INDEX,

@@ -117,6 +117,8 @@
 
 #include <systemlib/err.h>
 
+#if defined(GPIO_TONE_ALARM)
+
 /* Tone alarm configuration */
 #if   TONE_ALARM_TIMER == 2
 # define TONE_ALARM_BASE		STM32_TIM2_BASE
@@ -922,3 +924,5 @@ tone_alarm_main(int argc, char *argv[])
 
 	errx(1, "unrecognized command, try 'start', 'stop', an alarm number or name, or a file name starting with a '/'");
 }
+#endif
+

@@ -17,12 +17,12 @@ if mount -t vfat /dev/mmcsd0 /fs/microsd
 then
 	echo "[init] Card mounted at /fs/microsd"
 	# Start playing the startup tune
-	echo "[init] tone_alarm start > will change to use Beeper"
-	#tone_alarm start > will change to use Beeper.
+	echo "[init] tone_alarm start"
+	tone_alarm start
 else
 	echo "[init] No microSD card found"
 	# Play SOS
-	#tone_alarm 2 > will change to use Beeper.
+	tone_alarm 2
 fi
 
 #
@@ -123,7 +123,7 @@ then
 		#sh /etc/init.d/rc.sensors
 	
 		# Start one of the estimators
-		echo "[init] Start one of the estimators ( attitude_estimator_ekf ) >> all sensors need  to be implemented and then we can test it"
+		echo "[init] Start one of the estimators ( attitude_estimator_ekf ) >> wait for MPU6050 driver ready !!"
 		#attitude_estimator_ekf start
 	
 		# Start GPS
