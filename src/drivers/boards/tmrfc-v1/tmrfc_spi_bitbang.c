@@ -77,13 +77,17 @@
 
 /* Definitions for include/nuttx/spi/spi_bitbang.c. */
 
-#define SPI_SETSCK    stm32_gpiowrite(BITBANG_GPIO_SPI_SCLK, true)
-#define SPI_CLRSCK    stm32_gpiowrite(BITBANG_GPIO_SPI_SCLK, false)
-#define SPI_SETMOSI   stm32_gpiowrite(BITBANG_GPIO_SPI_MOSI, true)
-#define SPI_CLRMOSI   stm32_gpiowrite(BITBANG_GPIO_SPI_MOSI, false)
-#define SPI_GETMISO   stm32_gpioread(BITBANG_GPIO_SPI_MISO)
-#define SPI_SETCS     stm32_gpiowrite(BITBANG_GPIO_SPI_CS, true)
-#define SPI_CLRCS     stm32_gpiowrite(BITBANG_GPIO_SPI_CS, false)
+/* SDIO_CLK, PC12 */
+#define SPI_SETSCK    (*((volatile uint32_t*)STM32_GPIOC_ODR)) |= GPIO_ODR(12)
+#define SPI_CLRSCK    (*((volatile uint32_t*)STM32_GPIOC_ODR)) &= ~ GPIO_ODR(12)
+/* SDIO_D0, PC8 */
+#define SPI_GETMISO   ((*((volatile uint32_t*)STM32_GPIOC_IDR)) & GPIO_IDR(8)) >> 8
+/* SDIO_CMD, PD2 */
+#define SPI_SETMOSI   (*((volatile uint32_t*)STM32_GPIOD_ODR)) |= GPIO_ODR(2)
+#define SPI_CLRMOSI   (*((volatile uint32_t*)STM32_GPIOD_ODR)) &= ~ GPIO_ODR(2)
+/* SDIO_D3, PC11 */
+#define SPI_SETCS     (*((volatile uint32_t*)STM32_GPIOC_ODR)) |= GPIO_ODR(11)
+#define SPI_CLRCS     (*((volatile uint32_t*)STM32_GPIOC_ODR)) &= ~ GPIO_ODR(11)
 
 /* Only mode 0 */
 
