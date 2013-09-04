@@ -386,8 +386,11 @@ HMC5883::init()
     _num_reports = 2;
     _reports = new struct mag_report[_num_reports];
 
-    if (_reports == nullptr)
-        goto out;
+	if (_reports == nullptr) {
+		debug("can't get memory for reports");
+		ret = -ENOMEM;
+		goto out;
+	}
 
     _oldest_report = _next_report = 0;
 
@@ -395,8 +398,11 @@ HMC5883::init()
     memset(&_reports[0], 0, sizeof(_reports[0]));
     _mag_topic = orb_advertise(ORB_ID(sensor_mag), &_reports[0]);
 
-    if (_mag_topic < 0)
+    if (_mag_topic < 0) {
         debug("failed to create sensor_mag object");
+		ret = -ENOSPC;
+		goto out;
+	}
 
     ret = OK;
     /* sensor is ok, but not calibrated */
@@ -498,11 +504,12 @@ HMC5883::read(struct file *filp, char *buffer, size_t buflen)
 {
     unsigned count = buflen / sizeof(struct mag_report);
     int ret = 0;
+printf("1 %X %d %d %d\n",count, buflen, sizeof(struct mag_report), _measure_ticks);
 
     /* buffer must be large enough */
     if (count < 1)
         return -ENOSPC;
-
+printf("2\n");
     /* if automatic measurement is enabled */
     if (_measure_ticks > 0) {
 
@@ -512,17 +519,18 @@ HMC5883::read(struct file *filp, char *buffer, size_t buflen)
          * we are careful to avoid racing with them.
          */
         while (count--) {
+			printf(" count = %d\n", count);
             if (_oldest_report != _next_report) {
                 memcpy(buffer, _reports + _oldest_report, sizeof(*_reports));
                 ret += sizeof(_reports[0]);
                 INCREMENT(_oldest_report, _num_reports);
             }
         }
-
+printf("2-1 count = %d, ret = %X, _oldest_report = %X, _next_report = %X, %d \n",count, ret, _oldest_report, _next_report, sizeof(_reports[0]));
         /* if there was no data, warn the caller */
         return ret ? ret : -EAGAIN;
     }
-
+printf("3\n");
     /* manual measurement - run one conversion */
     /* XXX really it'd be nice to lock against other readers here */
     do {
@@ -530,6 +538,7 @@ HMC5883::read(struct file *filp, char *buffer, size_t buflen)
 
         /* trigger a measurement */
         if (OK != measure()) {
+			printf("4\n");
             ret = -EIO;
             break;
         }
@@ -539,6 +548,7 @@ HMC5883::read(struct file *filp, char *buffer, size_t buflen)
 
         /* run the collection phase */
         if (OK != collect()) {
+			printf("5\n");
             ret = -EIO;
             break;
         }
@@ -1333,7 +1343,7 @@ test()
     int fd = open(MAG_DEVICE_PATH, O_RDONLY);
 
     if (fd < 0)
-        err(1, "%s open failed (try 'hmc5883 start' if the driver is not running", MAG_DEVICE_PATH);
+        err(1, "%s open failed (try 'hmc5883 start' if the driver is not running)", MAG_DEVICE_PATH);
 
     /* do a simple demand read */
     sz = read(fd, &report, sizeof(report));
