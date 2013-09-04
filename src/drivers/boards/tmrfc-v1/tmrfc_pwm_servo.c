@@ -50,11 +50,18 @@
 
 #include "board_config.h"
 
+#if defined(GPIO_TIM2_CH1OUT)
 #define TIM2_INDEX 0
 #define TIM3_INDEX 1
 #define TIM4_INDEX 2
 #define TIM5_INDEX 3
 #define TIM8_INDEX 4
+#else
+#define TIM3_INDEX 0
+#define TIM4_INDEX 1
+#define TIM5_INDEX 2
+#define TIM8_INDEX 3
+#endif
 
 __EXPORT const struct pwm_servo_timer pwm_timers[PWM_SERVO_MAX_TIMERS] = {
 #if defined(GPIO_TIM2_CH1OUT)

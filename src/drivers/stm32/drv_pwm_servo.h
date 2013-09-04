@@ -43,27 +43,32 @@
 
 /* configuration limits */
 #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
-#define PWM_SERVO_MAX_TIMERS	5
-#define PWM_SERVO_MAX_CHANNELS	13
+# if defined(GPIO_TIM2_CH1OUT)
+# define PWM_SERVO_MAX_TIMERS   5
+# define PWM_SERVO_MAX_CHANNELS 13
+# else
+# define PWM_SERVO_MAX_TIMERS   4
+# define PWM_SERVO_MAX_CHANNELS 12
+# endif
 #else
-#define PWM_SERVO_MAX_TIMERS	4
-#define PWM_SERVO_MAX_CHANNELS	8
+# define PWM_SERVO_MAX_TIMERS   4
+# define PWM_SERVO_MAX_CHANNELS 8
 #endif
 
 /* array of timers dedicated to PWM servo use */
 struct pwm_servo_timer {
-	uint32_t	base;
-	uint32_t	clock_register;
-	uint32_t	clock_bit;
-	uint32_t	clock_freq;
+    uint32_t    base;
+    uint32_t    clock_register;
+    uint32_t    clock_bit;
+    uint32_t    clock_freq;
 };
 
 /* array of channels in logical order */
 struct pwm_servo_channel {
-	uint32_t	gpio;
-	uint8_t		timer_index;
-	uint8_t		timer_channel;
-	servo_position_t default_value;
+    uint32_t    gpio;
+    uint8_t     timer_index;
+    uint8_t     timer_channel;
+    servo_position_t default_value;
 };
 
 /* supplied by board-specific code */

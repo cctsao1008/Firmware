@@ -22,7 +22,7 @@ then
 else
 	echo "[init] No microSD card found"
 	# Play SOS
-	tone_alarm 2
+	tone_alarm error
 fi
 
 #
@@ -51,9 +51,6 @@ then
 	if sercon
 	then
 		echo "USB connected"
-	else
-		# second attempt
-		sercon &
 	fi
 	
 	#
@@ -83,6 +80,9 @@ then
 	fi
 	
 	#
+	# Try to get an USB console
+	nshterm /dev/ttyACM0 &
+	
 	# Check if auto-setup from one of the standard scripts is wanted
 	# SYS_AUTOSTART = 0 means no autostart (default)
 	#
