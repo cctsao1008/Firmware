@@ -301,13 +301,26 @@ __EXPORT int nsh_archinitialize(void)
 }
 
 
-
+/****************************************************************************
+ * Name: usbmsc_archinitialize
+ *
+ * Description:
+ *   Perform architecture specific initialization
+ *
+ ****************************************************************************/
 __EXPORT int usbmsc_archinitialize(void)
 {
     return OK;
 }
 
 #if defined(CONFIG_USBDEV_COMPOSITE)
+/****************************************************************************
+ * Name: usbmsc_exportluns
+ *
+ * Description:
+ *   Perform architecture specific initialization
+ *
+ ****************************************************************************/
 __EXPORT int usbmsc_exportluns(FAR void *handle)
 {
   FAR struct usbmsc_alloc_s *alloc = (FAR struct usbmsc_alloc_s *)handle;
@@ -371,11 +384,25 @@ errout_with_mutex:
   return ret;
 }
 
+/****************************************************************************
+ * Name: composite_archinitialize
+ *
+ * Description:
+ *   Perform architecture specific initialization
+ *
+ ****************************************************************************/
 __EXPORT int composite_archinitialize(void)
 {
     return OK;
 }
 
+/****************************************************************************
+ * Name: cdcacm_initialize
+ *
+ * Description:
+ *   Perform architecture specific initialization
+ *
+ ****************************************************************************/
 #define CDCACM_DEVNAME_FORMAT      "/dev/ttyACM%d"
 #define CDCACM_DEVNAME_SIZE        16
 __EXPORT int cdcacm_initialize(int minor, FAR void **handle)
