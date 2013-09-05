@@ -114,6 +114,9 @@ int eeprom_main(int argc, char *argv[])
 static void
 eeprom_attach(void)
 {
+    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+    ;
+    #else
 	/* find the right I2C */
 	struct i2c_dev_s *i2c = up_i2cinitialize(PX4_I2C_BUS_ONBOARD);
 	/* this resets the I2C bus, set correct bus speed again */
@@ -137,6 +140,7 @@ eeprom_attach(void)
 	/* if last attempt is still unsuccessful, abort */
 	if (eeprom_mtd == NULL)
 		errx(1, "failed to initialize EEPROM driver");
+    #endif
 
 	attached = true;
 }
