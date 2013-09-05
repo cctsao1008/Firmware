@@ -49,7 +49,7 @@ then
 	# Start terminal
 	#
 
-	# CDACM
+	# CDCACM
 	#if sercon
 	#then
 	#	echo "USB connected"

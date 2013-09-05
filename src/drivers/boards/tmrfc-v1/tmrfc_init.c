@@ -315,76 +315,6 @@ __EXPORT int usbmsc_archinitialize(void)
 
 #if defined(CONFIG_USBDEV_COMPOSITE)
 /****************************************************************************
- * Name: usbmsc_exportluns
- *
- * Description:
- *   Perform architecture specific initialization
- *
- ****************************************************************************/
-__EXPORT int usbmsc_exportluns(FAR void *handle)
-{
-  FAR struct usbmsc_alloc_s *alloc = (FAR struct usbmsc_alloc_s *)handle;
-  FAR struct usbmsc_dev_s *priv;
-  FAR struct usbmsc_driver_s *drvr;
-  irqstate_t flags;
-#ifdef SDCC
-  pthread_attr_t attr;
-#endif
-  int ret;
-
-#ifdef CONFIG_DEBUG
-  if (!alloc)
-    {
-      usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_EXPORTLUNSINVALIDARGS), 0);
-      return -ENXIO;
-    }
-#endif
-
-  priv = &alloc->dev;
-  drvr = &alloc->drvr;
-
-  /* Start the worker thread */
-
-  pthread_mutex_lock(&priv->mutex);
-  priv->thstate    = USBMSC_STATE_NOTSTARTED;
-  priv->theventset = USBMSC_EVENT_NOEVENTS;
-
-#ifdef SDCC
-  (void)pthread_attr_init(&attr);
-  ret = pthread_create(&priv->thread, &attr, usbmsc_workerthread, (pthread_addr_t)priv);
-#else
-  ret = pthread_create(&priv->thread, NULL, usbmsc_workerthread, (pthread_addr_t)priv);
-#endif
-  if (ret != OK)
-    {
-      usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_THREADCREATE), (uint16_t)-ret);
-      goto errout_with_mutex;
-    }
-
-  /* Register the USB storage class driver (unless we are part of a composite device) */
-
-#ifndef CONFIG_USBMSC_COMPOSITE
-  ret = usbdev_register(&drvr->drvr);
-  if (ret != OK)
-    {
-      usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_DEVREGISTER), (uint16_t)-ret);
-      goto errout_with_mutex;
-    }
-#endif
-
-  /* Signal to start the thread */
-
-  flags = irqsave();
-  priv->theventset |= USBMSC_EVENT_READY;
-  pthread_cond_signal(&priv->cond);
-  irqrestore(flags);
-
-errout_with_mutex:
-  pthread_mutex_unlock(&priv->mutex);
-  return ret;
-}
-
-/****************************************************************************
  * Name: composite_archinitialize
  *
  * Description:
@@ -393,108 +323,48 @@ errout_with_mutex:
  ****************************************************************************/
 __EXPORT int composite_archinitialize(void)
 {
-    return OK;
+    return EXIT_SUCCESS;
+}
+
+/****************************************************************************
+ * Name: usbmsc_exportluns
+ *
+ * Description:
+ *   After all of the LUNs have been bound, this function may be called
+ *   in order to export those LUNs in the USB storage device.
+ *
+ * Input Parameters:
+ *   handle - The handle returned by a previous call to usbmsc_configure().
+ *
+ * Returned Value:
+ *   0 on success; a negated errno on failure
+ *
+ ****************************************************************************/
+__EXPORT int usbmsc_exportluns(FAR void *handle)
+{
+  return EXIT_SUCCESS;
 }
 
 /****************************************************************************
  * Name: cdcacm_initialize
  *
  * Description:
- *   Perform architecture specific initialization
+ *   Register USB serial port (and USB serial console if so configured).
+ *
+ * Input Parameter:
+ *   minor - Device minor number.  E.g., minor 0 would correspond to
+ *     /dev/ttyACM0.
+ *   handle - An optional opaque reference to the CDC/ACM class object that
+ *     may subsequently be used with cdcacm_uninitialize().
+ *
+ * Returned Value:
+ *   Zero (OK) means that the driver was successfully registered.  On any
+ *   failure, a negated errno value is retured.
  *
  ****************************************************************************/
-#define CDCACM_DEVNAME_FORMAT      "/dev/ttyACM%d"
-#define CDCACM_DEVNAME_SIZE        16
 __EXPORT int cdcacm_initialize(int minor, FAR void **handle)
 {
-  FAR struct usbdevclass_driver_s *drvr = NULL;
-  int ret;
-  uint8_t retries = 0;
-  int fd = -1;
-  /* Try to set baud rate */
-  struct termios uart_config;
-  int termios_state;
-  char devname[CDCACM_DEVNAME_SIZE];
-
-  /* Get an instance of the serial driver class object */
-
-  ret = cdcacm_classobject(minor, &drvr);
-
-  if (ret == OK)
-    {
-      /* Register the USB serial class driver */
-
-      ret = usbdev_register(drvr);
-      if (ret < 0)
-        {
-          usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_DEVREGISTER), (uint16_t)-ret);
-        }
-    }
-
-  /* Return the driver instance (if any) if the caller has requested it
-   * by provided a pointer to the location to return it.
-   */
-
-  if (handle)
-    {
-      *handle = (FAR void*)drvr;
-    }
-
-#if 1
-    sprintf(devname, CDCACM_DEVNAME_FORMAT, minor);
-    message("Opening ""%s"" ........\n",devname);
-
-    while (retries < 50) {
-        /* the retries are to cope with the behaviour of /dev/ttyACM0 */
-        /* which may not be ready immediately. */
-        fd = open(devname, O_RDWR);
-        if (fd != -1) {
-            break;
-        }
-        usleep(100000);
-        retries++;
-    }
-    if (fd == -1) {
-        message("open %s failed \n", devname);
-        exit(1);
-    }
-
-    /* set up the serial port with output processing */
-    
-    
-
-    /* Back up the original uart configuration to restore it after exit */
-    if ((termios_state = tcgetattr(fd, &uart_config)) < 0) {
-        message("ERROR get termios config %s: %d\n", "%s \n", termios_state, devname);
-        close(fd);
-        return -1;
-    }
-
-    /* Set ONLCR flag (which appends a CR for every LF) */
-    uart_config.c_oflag |= (ONLCR | OPOST/* | OCRNL*/);
-
-    if ((termios_state = tcsetattr(fd, TCSANOW, &uart_config)) < 0) {
-        message("ERROR setting baudrate / termios config for %s (tcsetattr)\n", "%s \n",devname);
-        close(fd);
-        return -1;
-    }
-
-    /* setup standard file descriptors */
-    close(0);
-    close(1);
-    close(2);
-    dup2(fd, 0);
-    dup2(fd, 1);
-    dup2(fd, 2);
-
-    nsh_consolemain(0, NULL);
-
-    close(fd);
-
-//    return OK;
-
-#endif
-  return ret;
+    return EXIT_SUCCESS;
 }
 
 #endif
