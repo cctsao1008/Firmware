@@ -47,27 +47,32 @@
 
 #include <nuttx/config.h>
 #include <nuttx/usb/usbdev_trace.h>
-
 #include <stdbool.h>
 #include <stdio.h>
 #include <debug.h>
 #include <errno.h>
-
 #include <nuttx/arch.h>
 #include <nuttx/i2c.h>
 #include <nuttx/mmcsd.h>
 #include <nuttx/analog/adc.h>
-
 #include "stm32.h"
 #include "board_config.h"
 #include "stm32_uart.h"
-
 #include <arch/board/board.h>
-
 #include <drivers/drv_hrt.h>
 #include <drivers/drv_led.h>
-
 #include <systemlib/cpuload.h>
+
+#include <termios.h>
+#include <stdarg.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <apps/nsh.h>
+#include <fcntl.h>
+#include <systemlib/err.h>
+#include <nuttx/usb/usb.h>
+#include <nuttx/usb/storage.h>
+#include <nuttx/usb/usbdev.h>
 
 /****************************************************************************
  * Pre-Processor Definitions
@@ -128,7 +133,7 @@ __EXPORT void stm32_boardinitialize(void)
     stm32_spiinitialize();
 
     /* configure USB interfaces */
-    //stm32_usbinitialize
+    stm32_usbinitialize();
 
     /* configure LEDs (empty call to NuttX' ledinit) */
     up_ledinit();
@@ -295,19 +300,99 @@ __EXPORT int nsh_archinitialize(void)
     return OK;
 }
 
+
+
+__EXPORT int usbmsc_archinitialize(void)
+{
+    return OK;
+}
+
+#if defined(CONFIG_USBDEV_COMPOSITE)
+__EXPORT int usbmsc_exportluns(FAR void *handle)
+{
+  FAR struct usbmsc_alloc_s *alloc = (FAR struct usbmsc_alloc_s *)handle;
+  FAR struct usbmsc_dev_s *priv;
+  FAR struct usbmsc_driver_s *drvr;
+  irqstate_t flags;
+#ifdef SDCC
+  pthread_attr_t attr;
+#endif
+  int ret;
+
+#ifdef CONFIG_DEBUG
+  if (!alloc)
+    {
+      usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_EXPORTLUNSINVALIDARGS), 0);
+      return -ENXIO;
+    }
+#endif
+
+  priv = &alloc->dev;
+  drvr = &alloc->drvr;
+
+  /* Start the worker thread */
+
+  pthread_mutex_lock(&priv->mutex);
+  priv->thstate    = USBMSC_STATE_NOTSTARTED;
+  priv->theventset = USBMSC_EVENT_NOEVENTS;
+
+#ifdef SDCC
+  (void)pthread_attr_init(&attr);
+  ret = pthread_create(&priv->thread, &attr, usbmsc_workerthread, (pthread_addr_t)priv);
+#else
+  ret = pthread_create(&priv->thread, NULL, usbmsc_workerthread, (pthread_addr_t)priv);
+#endif
+  if (ret != OK)
+    {
+      usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_THREADCREATE), (uint16_t)-ret);
+      goto errout_with_mutex;
+    }
+
+  /* Register the USB storage class driver (unless we are part of a composite device) */
+
+#ifndef CONFIG_USBMSC_COMPOSITE
+  ret = usbdev_register(&drvr->drvr);
+  if (ret != OK)
+    {
+      usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_DEVREGISTER), (uint16_t)-ret);
+      goto errout_with_mutex;
+    }
+#endif
+
+  /* Signal to start the thread */
+
+  flags = irqsave();
+  priv->theventset |= USBMSC_EVENT_READY;
+  pthread_cond_signal(&priv->cond);
+  irqrestore(flags);
+
+errout_with_mutex:
+  pthread_mutex_unlock(&priv->mutex);
+  return ret;
+}
+
 __EXPORT int composite_archinitialize(void)
 {
     return OK;
 }
 
+#define CDCACM_DEVNAME_FORMAT      "/dev/ttyACM%d"
+#define CDCACM_DEVNAME_SIZE        16
 __EXPORT int cdcacm_initialize(int minor, FAR void **handle)
 {
-   FAR struct usbdevclass_driver_s *drvr = NULL;
+  FAR struct usbdevclass_driver_s *drvr = NULL;
   int ret;
+  uint8_t retries = 0;
+  int fd = -1;
+  /* Try to set baud rate */
+  struct termios uart_config;
+  int termios_state;
+  char devname[CDCACM_DEVNAME_SIZE];
 
   /* Get an instance of the serial driver class object */
 
   ret = cdcacm_classobject(minor, &drvr);
+
   if (ret == OK)
     {
       /* Register the USB serial class driver */
@@ -328,5 +413,62 @@ __EXPORT int cdcacm_initialize(int minor, FAR void **handle)
       *handle = (FAR void*)drvr;
     }
 
+#if 1
+    sprintf(devname, CDCACM_DEVNAME_FORMAT, minor);
+    message("Opening ""%s"" ........\n",devname);
+
+    while (retries < 50) {
+        /* the retries are to cope with the behaviour of /dev/ttyACM0 */
+        /* which may not be ready immediately. */
+        fd = open(devname, O_RDWR);
+        if (fd != -1) {
+            break;
+        }
+        usleep(100000);
+        retries++;
+    }
+    if (fd == -1) {
+        message("open %s failed \n", devname);
+        exit(1);
+    }
+
+    /* set up the serial port with output processing */
+    
+    
+
+    /* Back up the original uart configuration to restore it after exit */
+    if ((termios_state = tcgetattr(fd, &uart_config)) < 0) {
+        message("ERROR get termios config %s: %d\n", "%s \n", termios_state, devname);
+        close(fd);
+        return -1;
+    }
+
+    /* Set ONLCR flag (which appends a CR for every LF) */
+    uart_config.c_oflag |= (ONLCR | OPOST/* | OCRNL*/);
+
+    if ((termios_state = tcsetattr(fd, TCSANOW, &uart_config)) < 0) {
+        message("ERROR setting baudrate / termios config for %s (tcsetattr)\n", "%s \n",devname);
+        close(fd);
+        return -1;
+    }
+
+    /* setup standard file descriptors */
+    close(0);
+    close(1);
+    close(2);
+    dup2(fd, 0);
+    dup2(fd, 1);
+    dup2(fd, 2);
+
+    nsh_consolemain(0, NULL);
+
+    close(fd);
+
+//    return OK;
+
+#endif
   return ret;
 }
+
+#endif
+
