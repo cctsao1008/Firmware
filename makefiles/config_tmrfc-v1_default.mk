@@ -2,6 +2,15 @@
 # Makefile for the tmrfc_default configuration
 #
 
+# Need to set CONFIG_EXAMPLES_CDCACM=y in defconfig file
+CMD_CDCACM=y
+
+# Need to set CONFIG_EXAMPLES_USBMSC=y in defconfig file
+CMD_USBMSC=y
+
+# Need to set CONFIG_EXAMPLES_COMPOSITE=y in defconfig file
+# CMD_COMPOSITE is not set
+
 #
 # Use the configuration's ROMFS.
 #
@@ -150,10 +159,27 @@ define _B
 	$(strip $1).$(or $(strip $2),SCHED_PRIORITY_DEFAULT).$(or $(strip $3),CONFIG_PTHREAD_STACK_DEFAULT).$(strip $4)
 endef
 
-#                  command                 priority                   stack  entrypoint
+#                  command                 priority                   stack  entrypoint CONFIG_EXAMPLES_CDCACM
 BUILTIN_COMMANDS := \
 	$(call _B, sercon,                 ,                          2048,  sercon_main                ) \
 	$(call _B, serdis,                 ,                          2048,  serdis_main                ) \
-	$(call _B, sysinfo,                ,                          2048,  sysinfo_main               ) \
+	$(call _B, sysinfo,                ,                          2048,  sysinfo_main               )
+
+ifeq ($(CMD_CDCACM),y)
+BUILTIN_COMMANDS += \
+	$(call _B, sercon,                 ,                          2048,  sercon_main                ) \
+	$(call _B, serdis,                 ,                          2048,  serdis_main                )
+endif
+
+ifeq ($(CMD_USBMSC),y)
+BUILTIN_COMMANDS += \
 	$(call _B, msconn,                 ,                          2048,  msconn_main                ) \
 	$(call _B, msdis,                  ,                          2048,  msdis_main                 )
+endif
+
+ifeq ($(CMD_COMPOSITE),y)
+BUILTIN_COMMANDS += \
+	$(call _B, conn,                   ,                          2048,  conn_main                  ) \
+	$(call _B, disconn,                ,                          2048,  disconn_main               ) 
+endif
+
