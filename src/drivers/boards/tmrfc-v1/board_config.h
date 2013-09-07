@@ -57,11 +57,6 @@ __BEGIN_DECLS
  * Definitions
  ****************************************************************************************************/
 /* Configuration ************************************************************************************/
-
-//#ifdef CONFIG_STM32_SPI2
-//#  error "SPI2 is not supported on this board"
-//#endif
-
 #if defined(CONFIG_STM32_CAN1)
 #  warning "CAN1 is not supported on this board"
 #endif

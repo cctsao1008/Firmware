@@ -62,7 +62,7 @@
 #include "systemlib/err.h"
 
 #if !defined(PX4_I2C_BUS_ONBOARD) && !defined(TMR_I2C_BUS_ONBOARD)
-#  error PX4_I2C_BUS_ONBOARD not defined, cannot locate onboard EEPROM
+#  error PX4_I2C_BUS_ONBOARD or TMR_I2C_BUS_ONBOARD not defined, cannot locate onboard EEPROM
 #endif
 
 __EXPORT int eeprom_main(int argc, char *argv[]);
