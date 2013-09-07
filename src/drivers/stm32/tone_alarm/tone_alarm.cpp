@@ -87,9 +87,7 @@
  */
 
 #include <nuttx/config.h>
-#if defined(CONFIG_ARCH_BOARD_TMRFC_V1) && defined(GPIO_BEEP_ALARM_ENABLE)
 #include <nuttx/arch.h>
-#endif
 #include <debug.h>
 #include <drivers/device/device.h>
 #include <drivers/drv_tone_alarm.h>
@@ -120,7 +118,6 @@
 #include <systemlib/err.h>
 
 #if defined(GPIO_TONE_ALARM)
-
 /* Tone alarm configuration */
 #if   TONE_ALARM_TIMER == 2
 # define TONE_ALARM_BASE        STM32_TIM2_BASE
@@ -827,7 +824,7 @@ namespace
 
 ToneAlarm   *g_dev;
 
-#if defined(CONFIG_ARCH_BOARD_TMRFC_V1) && defined(GPIO_BEEP_ALARM_ENABLE)
+#if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
 /*
  * Timer register accessors
  */
@@ -949,7 +946,7 @@ tone_alarm_main(int argc, char *argv[])
             delete g_dev;
             errx(1, "ToneAlarm init failed");
         }
-        #if defined(CONFIG_ARCH_BOARD_TMRFC_V1) && defined(GPIO_BEEP_ALARM_ENABLE)
+        #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
         else
         {
             /* claim our interrupt vector */

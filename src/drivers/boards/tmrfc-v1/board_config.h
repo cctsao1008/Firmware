@@ -57,11 +57,6 @@ __BEGIN_DECLS
  * Definitions
  ****************************************************************************************************/
 /* Configuration ************************************************************************************/
-
-//#ifdef CONFIG_STM32_SPI2
-//#  error "SPI2 is not supported on this board"
-//#endif
-
 #if defined(CONFIG_STM32_CAN1)
 #  warning "CAN1 is not supported on this board"
 #endif
@@ -141,8 +136,8 @@ __BEGIN_DECLS
 #define GPIO_BEEP_ALARM       (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_50MHz|GPIO_OUTPUT_CLEAR|GPIO_PORTB|GPIO_PIN12)
 
 /* The tone alarm is enough to wake my wife when I was work at night, DISABLE it !! */
-#if 0
-#GPIO_BEEP_ALARM_ENABLE       1
+#if 1
+#define GPIO_BEEP_ALARM_ENABLE       1
 #endif
 
 /*

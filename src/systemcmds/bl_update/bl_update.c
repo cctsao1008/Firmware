@@ -52,6 +52,9 @@
 #include "systemlib/systemlib.h"
 #include "systemlib/err.h"
 
+#define FLASH_KEY1      0x45670123
+#define FLASH_KEY2      0xCDEF89AB
+
 __EXPORT int bl_update_main(int argc, char *argv[]);
 
 static void setopt(void);
@@ -107,8 +110,8 @@ bl_update_main(int argc, char *argv[])
 
 	/* unlock the control register */
 	volatile uint32_t *keyr = (volatile uint32_t *)0x40023c04;
-	*keyr = 0x45670123U;
-	*keyr = 0xcdef89abU;
+	*keyr = FLASH_KEY1;
+	*keyr = FLASH_KEY2;
 
 	volatile uint32_t *sr = (volatile uint32_t *)0x40023c0c;
 	volatile uint32_t *cr = (volatile uint32_t *)0x40023c10;
