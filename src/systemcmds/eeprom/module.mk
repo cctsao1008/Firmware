@@ -37,3 +37,4 @@
 
 MODULE_COMMAND		= eeprom
 SRCS				= 24xxxx_mtd.c eeprom.c internal_flash.c stm32f4xx_flash.c
+INCLUDE_DIRS		+= $(PX4_LIB_DIR)/mathlib/CMSIS/Include
