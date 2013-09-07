@@ -61,7 +61,7 @@
 #include "systemlib/param/param.h"
 #include "systemlib/err.h"
 
-#ifndef PX4_I2C_BUS_ONBOARD
+#if !defined(PX4_I2C_BUS_ONBOARD) && !defined(TMR_I2C_BUS_ONBOARD)
 #  error PX4_I2C_BUS_ONBOARD not defined, cannot locate onboard EEPROM
 #endif
 
@@ -81,33 +81,33 @@ static struct mtd_dev_s *eeprom_mtd;
 
 int eeprom_main(int argc, char *argv[])
 {
-	if (argc >= 2) {
-		if (!strcmp(argv[1], "start"))
-			eeprom_start();
+    if (argc >= 2) {
+        if (!strcmp(argv[1], "start"))
+            eeprom_start();
 
-		if (!strcmp(argv[1], "save_param"))
-			eeprom_save(argv[2]);
+        if (!strcmp(argv[1], "save_param"))
+            eeprom_save(argv[2]);
 
-		if (!strcmp(argv[1], "load_param"))
-			eeprom_load(argv[2]);
+        if (!strcmp(argv[1], "load_param"))
+            eeprom_load(argv[2]);
 
-		if (!strcmp(argv[1], "erase"))
-			eeprom_erase();
+        if (!strcmp(argv[1], "erase"))
+            eeprom_erase();
 
-		if (!strcmp(argv[1], "test"))
-			eeprom_test();
+        if (!strcmp(argv[1], "test"))
+            eeprom_test();
 
-		if (0) {	/* these actually require a file on the filesystem... */
+        if (0) {	/* these actually require a file on the filesystem... */
 
-			if (!strcmp(argv[1], "reformat"))
-				eeprom_ioctl(FIOC_REFORMAT);
+            if (!strcmp(argv[1], "reformat"))
+                eeprom_ioctl(FIOC_REFORMAT);
 
-			if (!strcmp(argv[1], "repack"))
-				eeprom_ioctl(FIOC_OPTIMIZE);
-		}
-	}
+            if (!strcmp(argv[1], "repack"))
+                eeprom_ioctl(FIOC_OPTIMIZE);
+        }
+    }
 
-	errx(1, "expected a command, try 'start'\n\t'save_param /eeprom/parameters'\n\t'load_param /eeprom/parameters'\n\t'erase'\n");
+    errx(1, "expected a command, try 'start'\n\t'save_param /eeprom/parameters'\n\t'load_param /eeprom/parameters'\n\t'erase'\n");
 }
 
 
@@ -115,62 +115,62 @@ static void
 eeprom_attach(void)
 {
     #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
-    ;
+    eeprom_mtd = up_flashinitialize();
     #else
-	/* find the right I2C */
-	struct i2c_dev_s *i2c = up_i2cinitialize(PX4_I2C_BUS_ONBOARD);
-	/* this resets the I2C bus, set correct bus speed again */
-	I2C_SETFREQUENCY(i2c, 400000);
+    /* find the right I2C */
+    struct i2c_dev_s *i2c = up_i2cinitialize(PX4_I2C_BUS_ONBOARD);
+    /* this resets the I2C bus, set correct bus speed again */
+    I2C_SETFREQUENCY(i2c, 400000);
 
-	if (i2c == NULL)
-		errx(1, "failed to locate I2C bus");
+    if (i2c == NULL)
+        errx(1, "failed to locate I2C bus");
 
-	/* start the MTD driver, attempt 5 times */
-	for (int i = 0; i < 5; i++) {
-		eeprom_mtd = at24c_initialize(i2c);
-		if (eeprom_mtd) {
-			/* abort on first valid result */
-			if (i > 0) {
-				warnx("warning: EEPROM needed %d attempts to attach", i+1);
-			}
-			break;
-		}
-	}
+    /* start the MTD driver, attempt 5 times */
+    for (int i = 0; i < 5; i++) {
+        eeprom_mtd = at24c_initialize(i2c);
+        if (eeprom_mtd) {
+            /* abort on first valid result */
+            if (i > 0) {
+                warnx("warning: EEPROM needed %d attempts to attach", i+1);
+            }
+            break;
+        }
+    }
 
-	/* if last attempt is still unsuccessful, abort */
-	if (eeprom_mtd == NULL)
-		errx(1, "failed to initialize EEPROM driver");
+    /* if last attempt is still unsuccessful, abort */
+    if (eeprom_mtd == NULL)
+        errx(1, "failed to initialize EEPROM driver");
     #endif
 
-	attached = true;
+    attached = true;
 }
 
 static void
 eeprom_start(void)
 {
-	int ret;
+    int ret;
 
-	if (started)
-		errx(1, "EEPROM already mounted");
+    if (started)
+        errx(1, "EEPROM already mounted");
 
-	if (!attached)
-		eeprom_attach();
+    if (!attached)
+        eeprom_attach();
 
-	/* start NXFFS */
-	ret = nxffs_initialize(eeprom_mtd);
+    /* start NXFFS */
+    ret = nxffs_initialize(eeprom_mtd);
 
-	if (ret < 0)
-		errx(1, "failed to initialize NXFFS - erase EEPROM to reformat");
+    if (ret < 0)
+        errx(1, "failed to initialize NXFFS - erase EEPROM to reformat");
 
-	/* mount the EEPROM */
-	ret = mount(NULL, "/eeprom", "nxffs", 0, NULL);
+    /* mount the EEPROM */
+    ret = mount(NULL, "/eeprom", "nxffs", 0, NULL);
 
-	if (ret < 0)
-		errx(1, "failed to mount /eeprom - erase EEPROM to reformat");
+    if (ret < 0)
+        errx(1, "failed to mount /eeprom - erase EEPROM to reformat");
 
-	started = true;
-	warnx("mounted EEPROM at /eeprom");
-	exit(0);
+    started = true;
+    warnx("mounted EEPROM at /eeprom");
+    exit(0);
 }
 
 extern int at24c_nuke(void);
@@ -178,85 +178,89 @@ extern int at24c_nuke(void);
 static void
 eeprom_erase(void)
 {
-	if (!attached)
-		eeprom_attach();
+    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+    // TODO
+    #else
+    if (!attached)
+        eeprom_attach();
 
-	if (at24c_nuke())
-		errx(1, "erase failed");
+    if (at24c_nuke())
+        errx(1, "erase failed");
+    #endif
 
-	errx(0, "erase done, reboot now");
+    errx(0, "erase done, reboot now");
 }
 
 static void
 eeprom_ioctl(unsigned operation)
 {
-	int fd;
+    int fd;
 
-	fd = open("/eeprom/.", 0);
+    fd = open("/eeprom/.", 0);
 
-	if (fd < 0)
-		err(1, "open /eeprom");
+    if (fd < 0)
+        err(1, "open /eeprom");
 
-	if (ioctl(fd, operation, 0) < 0)
-		err(1, "ioctl");
+    if (ioctl(fd, operation, 0) < 0)
+        err(1, "ioctl");
 
-	exit(0);
+    exit(0);
 }
 
 static void
 eeprom_save(const char *name)
 {
-	if (!started)
-		errx(1, "must be started first");
+    if (!started)
+        errx(1, "must be started first");
 
-	if (!name)
-		err(1, "missing argument for device name, try '/eeprom/parameters'");
+    if (!name)
+        err(1, "missing argument for device name, try '/eeprom/parameters'");
 
-	warnx("WARNING: 'eeprom save_param' deprecated - use 'param save' instead");
+    warnx("WARNING: 'eeprom save_param' deprecated - use 'param save' instead");
 
-	/* delete the file in case it exists */
-	unlink(name);
+    /* delete the file in case it exists */
+    unlink(name);
 
-	/* create the file */
-	int fd = open(name, O_WRONLY | O_CREAT | O_EXCL);
+    /* create the file */
+    int fd = open(name, O_WRONLY | O_CREAT | O_EXCL);
 
-	if (fd < 0)
-		err(1, "opening '%s' failed", name);
+    if (fd < 0)
+        err(1, "opening '%s' failed", name);
 
-	int result = param_export(fd, false);
-	close(fd);
+    int result = param_export(fd, false);
+    close(fd);
 
-	if (result < 0) {
-		unlink(name);
-		errx(1, "error exporting to '%s'", name);
-	}
+    if (result < 0) {
+        unlink(name);
+        errx(1, "error exporting to '%s'", name);
+    }
 
-	exit(0);
+    exit(0);
 }
 
 static void
 eeprom_load(const char *name)
 {
-	if (!started)
-		errx(1, "must be started first");
+    if (!started)
+        errx(1, "must be started first");
 
-	if (!name)
-		err(1, "missing argument for device name, try '/eeprom/parameters'");
+    if (!name)
+        err(1, "missing argument for device name, try '/eeprom/parameters'");
 
-	warnx("WARNING: 'eeprom load_param' deprecated - use 'param load' instead");
+    warnx("WARNING: 'eeprom load_param' deprecated - use 'param load' instead");
 
-	int fd = open(name, O_RDONLY);
+    int fd = open(name, O_RDONLY);
 
-	if (fd < 0)
-		err(1, "open '%s'", name);
+    if (fd < 0)
+        err(1, "open '%s'", name);
 
-	int result = param_load(fd);
-	close(fd);
+    int result = param_load(fd);
+    close(fd);
 
-	if (result < 0)
-		errx(1, "error importing from '%s'", name);
+    if (result < 0)
+        errx(1, "error importing from '%s'", name);
 
-	exit(0);
+    exit(0);
 }
 
 extern void at24c_test(void);
@@ -264,6 +268,11 @@ extern void at24c_test(void);
 static void
 eeprom_test(void)
 {
-	at24c_test();
-	exit(0);
+    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+    internal_flash_test();
+    #else
+    at24c_test();
+    #endif
+
+    exit(0);
 }

@@ -35,5 +35,5 @@
 # EEPROM file system driver
 #
 
-MODULE_COMMAND	 = eeprom
-SRCS		 = 24xxxx_mtd.c eeprom.c
+MODULE_COMMAND		= eeprom
+SRCS				= 24xxxx_mtd.c eeprom.c internal_flash.c stm32f4xx_flash.c
