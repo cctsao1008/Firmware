@@ -160,13 +160,13 @@ eeprom_start(void)
     ret = nxffs_initialize(eeprom_mtd);
 
     if (ret < 0)
-        errx(1, "failed to initialize NXFFS - erase EEPROM to reformat");
+        errx(1, "failed to initialize NXFFS - erase EEPROM to reformat, ret = %d", ret);
 
     /* mount the EEPROM */
     ret = mount(NULL, "/eeprom", "nxffs", 0, NULL);
 
     if (ret < 0)
-        errx(1, "failed to mount /eeprom - erase EEPROM to reformat");
+        errx(1, "failed to mount /eeprom - erase EEPROM to reformat, ret = %d", ret);
 
     started = true;
     warnx("mounted EEPROM at /eeprom");
@@ -175,11 +175,18 @@ eeprom_start(void)
 
 extern int at24c_nuke(void);
 
+#if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+extern int internal_flash_erase(FAR struct mtd_dev_s *dev, off_t startblock, size_t nblocks);
+#endif
+
 static void
 eeprom_erase(void)
 {
     #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
-    // TODO
+    if (!attached)
+        eeprom_attach();
+
+    internal_flash_erase( NULL, 0, 16);
     #else
     if (!attached)
         eeprom_attach();
