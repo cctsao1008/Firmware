@@ -63,7 +63,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/clock.h>
 
-#include <arch/board/board.h>
+#include <board_config.h>
 #include <drivers/drv_hrt.h>
 
 #include <drivers/device/i2c.h>
@@ -71,6 +71,8 @@
 #include <drivers/drv_accel.h>
 #include <drivers/drv_gyro.h>
 #include <mathlib/math/filter/LowPassFilter2p.hpp>
+
+#define MPU6050_ADDRESS        TMR_I2C_OBDEV_MPU6050
 
 #define DIR_READ			0x80
 #define DIR_WRITE			0x00
@@ -149,13 +151,24 @@
 #define MPU6050_REV_D9			0x59
 #define MPU6050_REV_D10			0x5A
 
+#define MPU6050_ACCEL_DEFAULT_RANGE_G			8
+#define MPU6050_ACCEL_DEFAULT_RATE			1000
+#define MPU6050_ACCEL_DEFAULT_DRIVER_FILTER_FREQ	30
+
+#define MPU6050_GYRO_DEFAULT_RANGE_G			8
+#define MPU6050_GYRO_DEFAULT_RATE			1000
+#define MPU6050_GYRO_DEFAULT_DRIVER_FILTER_FREQ		30
+
+#define MPU6050_DEFAULT_ONCHIP_FILTER_FREQ		42
+
+#define MPU6050_ONE_G					9.80665f
 
 class MPU6050_gyro;
 
 class MPU6050 : public device::I2C
 {
 public:
-	MPU6050(int bus, i2c_dev_e device);
+	MPU6050(int bus);
 	virtual ~MPU6050();
 
 	virtual int		init();
@@ -291,6 +304,20 @@ private:
 	 */
 	 int 			self_test();
 
+	/**
+	 * Accel self test
+	 *
+	 * @return 0 on success, 1 on failure
+	 */
+	int 			accel_self_test();
+
+	/**
+	 * Gyro self test
+	 *
+	 * @return 0 on success, 1 on failure
+	 */
+	 int 			gyro_self_test();
+
 	/*
 	  set low pass filter frequency
 	 */
@@ -324,10 +351,10 @@ private:
 };
 
 /** driver 'main' command */
-extern "C" { __EXPORT int MPU6050_main(int argc, char *argv[]); }
+extern "C" { __EXPORT int mpu6050_main(int argc, char *argv[]); }
 
 MPU6050::MPU6050(int bus) :
-	//SPI("MPU6050", ACCEL_DEVICE_PATH, bus, device, SPIDEV_MODE3, 10000000),
+    I2C("HMC5883", ACCEL_DEVICE_PATH, bus, MPU6050_ADDRESS, 400000),
 	_gyro(new MPU6050_gyro(this)),
 	_product(0),
 	_call_interval(0),
@@ -342,12 +369,12 @@ MPU6050::MPU6050(int bus) :
 	_reads(0),
 	_sample_rate(1000),
 	_sample_perf(perf_alloc(PC_ELAPSED, "mpu6050_read")),
-	_accel_filter_x(1000, 30),
-	_accel_filter_y(1000, 30),
-	_accel_filter_z(1000, 30),
-	_gyro_filter_x(1000, 30),
-        _gyro_filter_y(1000, 30),
-        _gyro_filter_z(1000, 30)
+	_accel_filter_x(MPU6050_ACCEL_DEFAULT_RATE, MPU6050_ACCEL_DEFAULT_DRIVER_FILTER_FREQ),
+	_accel_filter_y(MPU6050_ACCEL_DEFAULT_RATE, MPU6050_ACCEL_DEFAULT_DRIVER_FILTER_FREQ),
+	_accel_filter_z(MPU6050_ACCEL_DEFAULT_RATE, MPU6050_ACCEL_DEFAULT_DRIVER_FILTER_FREQ),
+	_gyro_filter_x(MPU6050_GYRO_DEFAULT_RATE, MPU6050_GYRO_DEFAULT_DRIVER_FILTER_FREQ),
+	_gyro_filter_y(MPU6050_GYRO_DEFAULT_RATE, MPU6050_GYRO_DEFAULT_DRIVER_FILTER_FREQ),
+	_gyro_filter_z(MPU6050_GYRO_DEFAULT_RATE, MPU6050_GYRO_DEFAULT_DRIVER_FILTER_FREQ)
 {
 	// disable debug() calls
 	_debug_enabled = false;
@@ -473,7 +500,7 @@ void MPU6050::reset()
 	// FS & DLPF   FS=2000 deg/s, DLPF = 20Hz (low pass filter)
 	// was 90 Hz, but this ruins quality and does not improve the
 	// system response
-	_set_dlpf_filter(42);
+	_set_dlpf_filter(MPU6050_DEFAULT_ONCHIP_FILTER_FREQ);
 	usleep(1000);
 	// Gyro scale 2000 deg/s ()
 	write_reg(MPUREG_GYRO_CONFIG, BITS_FS_2000DPS);
@@ -516,8 +543,8 @@ void MPU6050::reset()
 
 	// Correct accel scale factors of 4096 LSB/g
 	// scale to m/s^2 ( 1g = 9.81 m/s^2)
-	_accel_range_scale = (9.81f / 4096.0f);
-	_accel_range_m_s2 = 8.0f * 9.81f;
+	_accel_range_scale = (MPU6050_ONE_G / 4096.0f);
+	_accel_range_m_s2 = 8.0f * MPU6050_ONE_G;
 
 	usleep(1000);
 
@@ -649,6 +676,56 @@ MPU6050::self_test()
 	return (_reads > 0) ? 0 : 1;
 }
 
+int
+MPU6050::accel_self_test()
+{
+	if (self_test())
+		return 1;
+
+	/* inspect accel offsets */
+	if (fabsf(_accel_scale.x_offset) < 0.000001f)
+		return 1;
+	if (fabsf(_accel_scale.x_scale - 1.0f) > 0.4f || fabsf(_accel_scale.x_scale - 1.0f) < 0.000001f)
+		return 1;
+
+	if (fabsf(_accel_scale.y_offset) < 0.000001f)
+		return 1;
+	if (fabsf(_accel_scale.y_scale - 1.0f) > 0.4f || fabsf(_accel_scale.y_scale - 1.0f) < 0.000001f)
+		return 1;
+
+	if (fabsf(_accel_scale.z_offset) < 0.000001f)
+		return 1;
+	if (fabsf(_accel_scale.z_scale - 1.0f) > 0.4f || fabsf(_accel_scale.z_scale - 1.0f) < 0.000001f)
+		return 1;
+
+	return 0;
+}
+
+int
+MPU6050::gyro_self_test()
+{
+	if (self_test())
+		return 1;
+
+	/* evaluate gyro offsets, complain if offset -> zero or larger than 6 dps */
+	if (fabsf(_gyro_scale.x_offset) > 0.1f || fabsf(_gyro_scale.x_offset) < 0.000001f)
+		return 1;
+	if (fabsf(_gyro_scale.x_scale - 1.0f) > 0.3f)
+		return 1;
+
+	if (fabsf(_gyro_scale.y_offset) > 0.1f || fabsf(_gyro_scale.y_offset) < 0.000001f)
+		return 1;
+	if (fabsf(_gyro_scale.y_scale - 1.0f) > 0.3f)
+		return 1;
+
+	if (fabsf(_gyro_scale.z_offset) > 0.1f || fabsf(_gyro_scale.z_offset) < 0.000001f)
+		return 1;
+	if (fabsf(_gyro_scale.z_scale - 1.0f) > 0.3f)
+		return 1;
+
+	return 0;
+}
+
 ssize_t
 MPU6050::gyro_read(struct file *filp, char *buffer, size_t buflen)
 {
@@ -708,9 +785,10 @@ MPU6050::ioctl(struct file *filp, int cmd, unsigned long arg)
 
 				/* set default/max polling rate */
 			case SENSOR_POLLRATE_MAX:
+				return ioctl(filp, SENSORIOCSPOLLRATE, 1000);
+
 			case SENSOR_POLLRATE_DEFAULT:
-				/* set to same as sample rate per default */
-				return ioctl(filp, SENSORIOCSPOLLRATE, _sample_rate);
+				return ioctl(filp, SENSORIOCSPOLLRATE, MPU6050_ACCEL_DEFAULT_RATE);
 
 				/* adjust to a legal polling interval in Hz */
 			default: {
@@ -828,10 +906,10 @@ MPU6050::ioctl(struct file *filp, int cmd, unsigned long arg)
 		// _accel_range_m_s2 = 8.0f * 9.81f;
 		return -EINVAL;
 	case ACCELIOCGRANGE:
-		return _accel_range_m_s2;
+		return (unsigned long)((_accel_range_m_s2)/MPU6050_ONE_G + 0.5f);
 
 	case ACCELIOCSELFTEST:
-		return self_test();
+		return accel_self_test();
 
 	default:
 		/* give it to the superclass */
@@ -911,10 +989,10 @@ MPU6050::gyro_ioctl(struct file *filp, int cmd, unsigned long arg)
 		// _gyro_range_rad_s = xx
 		return -EINVAL;
 	case GYROIOCGRANGE:
-		return _gyro_range_rad_s;
+		return (unsigned long)(_gyro_range_rad_s * 180.0f / M_PI_F + 0.5f);
 
 	case GYROIOCSELFTEST:
-		return self_test();
+		return gyro_self_test();
 
 	default:
 		/* give it to the superclass */
@@ -922,6 +1000,7 @@ MPU6050::gyro_ioctl(struct file *filp, int cmd, unsigned long arg)
 	}
 }
 
+#if 1
 uint8_t
 MPU6050::read_reg(unsigned reg)
 {
@@ -929,10 +1008,17 @@ MPU6050::read_reg(unsigned reg)
 
 	cmd[0] = reg | DIR_READ;
 
-	transfer(cmd, cmd, sizeof(cmd));
+	//transfer(cmd, cmd, sizeof(cmd));
 
 	return cmd[1];
 }
+#else
+int
+MPU6050::read_reg(uint8_t reg, uint8_t &value)
+{
+    return transfer(&reg, 1, &val, 1);
+}
+#endif
 
 uint16_t
 MPU6050::read_reg16(unsigned reg)
@@ -941,11 +1027,12 @@ MPU6050::read_reg16(unsigned reg)
 
 	cmd[0] = reg | DIR_READ;
 
-	transfer(cmd, cmd, sizeof(cmd));
+	//transfer(cmd, cmd, sizeof(cmd));
 
 	return (uint16_t)(cmd[1] << 8) | cmd[2];
 }
 
+#if 1
 void
 MPU6050::write_reg(unsigned reg, uint8_t value)
 {
@@ -954,8 +1041,17 @@ MPU6050::write_reg(unsigned reg, uint8_t value)
 	cmd[0] = reg | DIR_WRITE;
 	cmd[1] = value;
 
-	transfer(cmd, nullptr, sizeof(cmd));
+	//transfer(cmd, nullptr, sizeof(cmd));
 }
+#else
+int
+MPU6050::write_reg(uint8_t reg, uint8_t value)
+{
+    uint8_t cmd[] = { reg, val };
+
+    return transfer(&cmd[0], 2, nullptr, 0);
+}
+#endif
 
 void
 MPU6050::modify_reg(unsigned reg, uint8_t clearbits, uint8_t setbits)
@@ -1077,8 +1173,8 @@ MPU6050::measure()
 	 * Fetch the full set of measurements from the MPU6050 in one pass.
 	 */
 	mpu_report.cmd = DIR_READ | MPUREG_INT_STATUS;
-	if (OK != transfer((uint8_t *)&mpu_report, ((uint8_t *)&mpu_report), sizeof(mpu_report)))
-		return;
+	//if (OK != transfer((uint8_t *)&mpu_report, ((uint8_t *)&mpu_report), sizeof(mpu_report)))
+	//	return;
 
 	/* count measurement */
 	_reads++;
@@ -1331,7 +1427,7 @@ test()
 	warnx("acc  y:  \t%d\traw 0x%0x", (short)a_report.y_raw, (unsigned short)a_report.y_raw);
 	warnx("acc  z:  \t%d\traw 0x%0x", (short)a_report.z_raw, (unsigned short)a_report.z_raw);
 	warnx("acc range: %8.4f m/s^2 (%8.4f g)", (double)a_report.range_m_s2,
-	      (double)(a_report.range_m_s2 / 9.81f));
+	      (double)(a_report.range_m_s2 / MPU6050_ONE_G));
 
 	/* do a simple demand read */
 	sz = read(fd_gyro, &g_report, sizeof(g_report));
