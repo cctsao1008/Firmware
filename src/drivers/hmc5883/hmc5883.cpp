@@ -384,31 +384,25 @@ HMC5883::init()
 
     /* allocate basic report buffers */
     _num_reports = 2;
-    _reports = new struct mag_report[_num_reports];
+	_reports = new struct mag_report[_num_reports];
 
-    if (_reports == nullptr) {
-        debug("can't get memory for reports");
-        ret = -ENOMEM;
-        goto out;
-    }
+	if (_reports == nullptr)
+		goto out;
 
-    _oldest_report = _next_report = 0;
+	_oldest_report = _next_report = 0;
 
-    /* get a publish handle on the mag topic */
-    memset(&_reports[0], 0, sizeof(_reports[0]));
-    _mag_topic = orb_advertise(ORB_ID(sensor_mag), &_reports[0]);
+	/* get a publish handle on the mag topic */
+	memset(&_reports[0], 0, sizeof(_reports[0]));
+	_mag_topic = orb_advertise(ORB_ID(sensor_mag), &_reports[0]);
 
-    if (_mag_topic < 0) {
-        debug("failed to create sensor_mag object");
-        ret = -ENOSPC;
-        goto out;
-    }
+	if (_mag_topic < 0)
+		debug("failed to create sensor_mag object");
 
-    ret = OK;
-    /* sensor is ok, but not calibrated */
-    _sensor_ok = true;
+	ret = OK;
+	/* sensor is ok, but not calibrated */
+	_sensor_ok = true;
 out:
-    return ret;
+	return ret;
 }
 
 int HMC5883::set_range(unsigned range)
@@ -980,11 +974,12 @@ int HMC5883::calibrate(struct file *filp, unsigned enable)
     warnx("sampling 500 samples for scaling offset");
 
     /* set the queue depth to 10 */
-    if (OK != ioctl(filp, SENSORIOCSQUEUEDEPTH, 10)) {
-        warn("failed to set queue depth");
-        ret = 1;
-        goto out;
-    }
+	/* don't do this for now, it can lead to a crash in start() respectively work_queue() */
+//	if (OK != ioctl(filp, SENSORIOCSQUEUEDEPTH, 10)) {
+//		warn("failed to set queue depth");
+//		ret = 1;
+//		goto out;
+//	}
 
     /* start the sensor polling at 50 Hz */
     if (OK != ioctl(filp, SENSORIOCSPOLLRATE, 50)) {
@@ -1336,33 +1331,37 @@ test()
     ssize_t sz;
     int ret;
 
-    int fd = open(MAG_DEVICE_PATH, O_RDONLY);
+	int fd = open(MAG_DEVICE_PATH, O_RDONLY);
 
-    if (fd < 0)
-        err(1, "%s open failed (try 'hmc5883 start' if the driver is not running)", MAG_DEVICE_PATH);
+	if (fd < 0)
+		err(1, "%s open failed (try 'hmc5883 start' if the driver is not running", MAG_DEVICE_PATH);
 
-    /* do a simple demand read */
-    sz = read(fd, &report, sizeof(report));
+	/* set the queue depth to 10 */
+	if (OK != ioctl(fd, SENSORIOCSQUEUEDEPTH, 10))
+		errx(1, "failed to set queue depth");
 
-    if (sz != sizeof(report))
-        err(1, "immediate read failed, %d",sz);
+	/* do a simple demand read */
+	sz = read(fd, &report, sizeof(report));
+
+	if (sz != sizeof(report))
+		err(1, "immediate read failed");
 
     warnx("single read");
     warnx("measurement: %.6f  %.6f  %.6f", (double)report.x, (double)report.y, (double)report.z);
     warnx("time:        %lld", report.timestamp);
 
-    /* check if mag is onboard or external */
-    if ((ret = ioctl(fd, MAGIOCGEXTERNAL, 0)) < 0)
-        errx(1, "failed to get if mag is onboard or external");
-    warnx("device active: %s", ret ? "external" : "onboard");
+	/* check if mag is onboard or external */
+	if ((ret = ioctl(fd, MAGIOCGEXTERNAL, 0)) < 0)
+		errx(1, "failed to get if mag is onboard or external");
+	warnx("device active: %s", ret ? "external" : "onboard");
 
-    /* set the queue depth to 10 */
-    if (OK != ioctl(fd, SENSORIOCSQUEUEDEPTH, 10))
-        errx(1, "failed to set queue depth");
+	/* set the queue depth to 5 */
+	if (OK != ioctl(fd, SENSORIOCSQUEUEDEPTH, 10))
+		errx(1, "failed to set queue depth");
 
-    /* start the sensor polling at 2Hz */
-    if (OK != ioctl(fd, SENSORIOCSPOLLRATE, 2))
-        errx(1, "failed to set 2Hz poll rate");
+	/* start the sensor polling at 2Hz */
+	if (OK != ioctl(fd, SENSORIOCSPOLLRATE, 2))
+		errx(1, "failed to set 2Hz poll rate");
 
     /* read the sensor 5x and report each value */
     for (unsigned i = 0; i < 5; i++) {
