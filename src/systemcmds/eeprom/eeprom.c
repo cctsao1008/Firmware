@@ -183,10 +183,12 @@ static void
 eeprom_erase(void)
 {
     #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
-    if (!attached)
-        eeprom_attach();
+    if(started == true)
+    {
+         errx(0, "Erase failed !! eeprom already  mounted.");
+    }
 
-    internal_flash_erase( NULL, 0, 16);
+    internal_flash_erase( NULL, NULL, NULL);
     #else
     if (!attached)
         eeprom_attach();
