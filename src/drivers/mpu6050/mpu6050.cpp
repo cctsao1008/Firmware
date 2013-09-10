@@ -354,7 +354,7 @@ private:
 extern "C" { __EXPORT int mpu6050_main(int argc, char *argv[]); }
 
 MPU6050::MPU6050(int bus) :
-    I2C("HMC5883", ACCEL_DEVICE_PATH, bus, MPU6050_ADDRESS, 400000),
+    I2C("MPU6050", ACCEL_DEVICE_PATH, bus, MPU6050_ADDRESS, 400000),
 	_gyro(new MPU6050_gyro(this)),
 	_product(0),
 	_call_interval(0),
@@ -563,7 +563,7 @@ void MPU6050::reset()
 int
 MPU6050::probe()
 {
-
+#if 0
 	/* look for a product ID we recognise */
 	_product = read_reg(MPUREG_PRODUCT_ID);
 
@@ -587,6 +587,9 @@ MPU6050::probe()
 
 	debug("unexpected ID 0x%02x", _product);
 	return -EIO;
+#else
+    return OK;
+#endif
 }
 
 /*
@@ -1349,17 +1352,27 @@ start()
 	int fd;
 
 	if (g_dev != nullptr)
-		/* if already started, the still command succeeded */
-		errx(0, "already started");
+        /* if already started, the still command succeeded */
+        errx(0, "already started");
 
-	/* create the driver */
-	//g_dev = new MPU6050(1 /* XXX magic number */, (i2c_dev_e)TMR_SPIDEV_MPU);
+    /* create the driver, attempt expansion bus first */
+    g_dev = new MPU6050(TMR_I2C_BUS_EXPANSION);
 
-	if (g_dev == nullptr)
-		goto fail;
+    if (g_dev != nullptr && OK != g_dev->init()) {
+        delete g_dev;
+        g_dev = nullptr;
+    }
 
-	if (OK != g_dev->init())
-		goto fail;
+    #if defined(TMR_I2C_BUS_ONBOARD)
+    /* if this failed, attempt onboard sensor */
+    if (g_dev == nullptr) {
+        g_dev = new MPU6050(TMR_I2C_BUS_ONBOARD);
+
+        if (g_dev != nullptr && OK != g_dev->init()) {
+            goto fail;
+        }
+    }
+    #endif
 
 	/* set the poll rate to default, starts automatic data collection */
 	fd = open(ACCEL_DEVICE_PATH, O_RDONLY);
