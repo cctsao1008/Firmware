@@ -25,18 +25,20 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/usb/usbdev_trace.h>
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <debug.h>
 #include <errno.h>
 #include <nuttx/arch.h>
+#include <nuttx/spi/spi.h>
 #include <nuttx/i2c.h>
+#include <nuttx/sdio.h>
 #include <nuttx/mmcsd.h>
 #include <nuttx/analog/adc.h>
-#include "stm32.h"
+#include <stm32.h>
 #include "board_config.h"
-#include "stm32_uart.h"
+#include <stm32_uart.h>
 #include <arch/board/board.h>
 #include <drivers/drv_hrt.h>
 #include <drivers/drv_led.h>
@@ -258,13 +260,16 @@ __EXPORT int nsh_archinitialize(void)
         CONFIG_NSH_MMCSDSLOTNO);
         
     #else  /* Use SDIO to access Micro SD card  */
+	#ifdef CONFIG_MMCSD
+	/* First, get an instance of the SDIO interface */
     
     /* Mount the SDIO-based MMC/SD block driver first and get an instance of the SDIO interface */
     message("[boot] Initializing SDIO slot %d\n", CONFIG_NSH_MMCSDSLOTNO);
     sdio = sdio_initialize(CONFIG_NSH_MMCSDSLOTNO);
 
     if (!sdio) {
-        message("[boot] Failed to initialize SDIO slot %d\n", CONFIG_NSH_MMCSDSLOTNO);
+        message("[boot] nsh_archinitialize: Failed to initialize SDIO slot %d\n",
+            CONFIG_NSH_MMCSDSLOTNO);
         return -ENODEV;
     }
 
@@ -272,7 +277,7 @@ __EXPORT int nsh_archinitialize(void)
     message("[boot] Bind SDIO to the MMC/SD driver, minor=%d\n", CONFIG_NSH_MMCSDMINOR);
     result = mmcsd_slotinitialize(CONFIG_NSH_MMCSDMINOR, sdio);
     if (result != OK) {
-        message("[boot] Failed to bind SDIO to the MMC/SD driver: %d\n", result);
+        message("[boot] nsh_archinitialize: Failed to bind SDIO to the MMC/SD driver: %d\n", result);
         return result;
     }
     
@@ -280,6 +285,9 @@ __EXPORT int nsh_archinitialize(void)
   
     /* Then let's guess and say that there is a card in the slot */
     sdio_mediachange(sdio, true);
+
+	message("[boot] Initialized SDIO\n");
+	#endif
     #endif
 
     /* Initializing SPI port 3 */
