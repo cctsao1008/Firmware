@@ -59,11 +59,11 @@
 
 #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
 
-#define PCA9536DP_ADDRESS    0x41
-#define PCA9533DP_ADDRESS    0x62
-#define MPU6050_ADDRESS      0x69
-#define HMC5883L_ADDRESS     0x1E
-#define MS5611_ADDRESS       0x77
+#define PCA9536DP_ADDRESS    TMR_I2C_OBDEV_PCA9536
+#define PCA9533DP_ADDRESS    TMR_I2C_OBDEV_PCA9533
+#define MPU6050_ADDRESS      TMR_I2C_OBDEV_MPU6050
+#define HMC5883L_ADDRESS     TMR_I2C_OBDEV_HMC5883
+#define MS5611_ADDRESS       TMR_I2C_OBDEV_MS5611
 
 /* Registers and Settings For MPU6050 */
 #define MPU6050_RA_INT_PIN_CFG              0x37
@@ -183,9 +183,9 @@ int i2c_main(int argc, char *argv[])
 
             ret = transfer(HMC5883L_ADDRESS, NULL, 0, (uint8_t *)&val, sizeof(val));
             if (ret)
-                printf("  HMC5883L recive failed - %d\n", ret);
+                printf("  HMC5883 recive failed - %d\n", ret);
             else
-                printf("  ( 0x%x ) Have HMC5883L\n", HMC5883L_ADDRESS);
+                printf("  ( 0x%x ) Have HMC5883\n", HMC5883L_ADDRESS);
 
             buf[0] = CMD_RESET;
 
