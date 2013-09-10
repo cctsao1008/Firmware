@@ -99,7 +99,7 @@ __BEGIN_DECLS
 #define TMR_I2C_OBDEV_MS5611    0x77
 #define TMR_I2C_OBDEV_PCA9536   0x41
 #define TMR_I2C_OBDEV_PCA9533   0x62
-#define TMR_I2C_OBDEV_MPU6050   0x68 
+#define TMR_I2C_OBDEV_MPU6050   0x69 
 
 #define TMR_I2C_OBDEV_EEPROM    NOTDEFINED
 
@@ -189,8 +189,8 @@ __BEGIN_DECLS
  */
 #define HRT_TIMER           1   /* use timer1 for the HRT */
 #define HRT_TIMER_CHANNEL   1   /* use capture/compare channel */
-#define HRT_PPM_CHANNEL     3   /* use capture/compare channel 3 */
-#define GPIO_PPM_IN     (GPIO_ALT|GPIO_AF1|GPIO_SPEED_50MHz|GPIO_PULLUP|GPIO_PORTA|GPIO_PIN10)
+#define HRT_PPM_CHANNEL	1	/* use capture/compare channel 1 */
+#define GPIO_PPM_IN	        (GPIO_ALT|GPIO_AF1|GPIO_SPEED_50MHz|GPIO_PULLUP|GPIO_PORTA|GPIO_PIN8) 
 
 /****************************************************************************************************
  * Public Types
