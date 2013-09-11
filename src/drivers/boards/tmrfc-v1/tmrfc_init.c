@@ -175,7 +175,7 @@ __EXPORT int nsh_archinitialize(void)
     /* IN12 and IN13 further below */
     #endif
 
-    message("[boot] Initializing (HRT) 1...\n");
+    message("[boot] Initializing HRT Callout Interface\n");
     usleep(200000);
 
     /* configure the high-resolution time/callout interface */
@@ -183,7 +183,7 @@ __EXPORT int nsh_archinitialize(void)
 
     /* configure CPU load estimation */
     #ifdef CONFIG_SCHED_INSTRUMENTATION
-    message("[boot] Initializing (CPU) 2...\n");
+    message("[boot] Initializing CPU Load Estimation\n");
     usleep(200000);
     cpuload_initialize_once();
     #endif
@@ -200,7 +200,7 @@ __EXPORT int nsh_archinitialize(void)
     ts.tv_nsec = 1000000;
 
     #ifdef SERIAL_HAVE_DMA
-    message("[boot] Initializing (DMA) 3...\n");
+    message("[boot] Initializing Serial DMA\n");
     usleep(200000);
     hrt_call_every(&serial_dma_call,
                ts_to_abstime(&ts),
@@ -211,7 +211,7 @@ __EXPORT int nsh_archinitialize(void)
 
     /* All LEDs controlled by PCA9533 and PCA9536 in TMR-FC via I2C */
     /* use pca953x as default LED driver(cdev), and register it to "/dev/led", and disable original LED driver (led.cpp) */
-    message("[boot] Initializing pca953x driver\n");
+    message("[boot] Initializing PCA9533 and PCA9536 \n");
     drv_pca953x_start();
 
     #if 0 /* disable original LED driver (led.cpp), because it don't work, don't know why it?? */
