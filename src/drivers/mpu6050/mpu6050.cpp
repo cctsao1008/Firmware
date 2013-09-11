@@ -186,8 +186,6 @@ public:
 protected:
     virtual int     probe();
 
-	work_s          _work;
-
     friend class MPU6050_gyro;
 
     virtual ssize_t     gyro_read(struct file *filp, char *buffer, size_t buflen);
@@ -200,6 +198,7 @@ private:
 
     struct hrt_call     _call;
     unsigned        _call_interval;
+	work_s          _work;
 
     typedef RingBuffer<accel_report> AccelReportBuffer;
     AccelReportBuffer   *_accel_reports;
@@ -810,6 +809,10 @@ MPU6050::ioctl(struct file *filp, int cmd, unsigned long arg)
 
                 /* adjust to a legal polling interval in Hz */
             default: {
+
+			        /* do we need to start internal polling? */
+                    bool want_start = (_call_interval == 0);
+
                     /* convert hz to hrt interval via microseconds */
                     unsigned ticks = 1000000 / arg;
 
@@ -834,21 +837,10 @@ MPU6050::ioctl(struct file *filp, int cmd, unsigned long arg)
                     /* XXX this is a bit shady, but no other way to adjust... */
                     _call.period = _call_interval = ticks;
 
-					/* do we need to start internal polling? */
-                    bool want_start = (_call_interval != 0);
-
-					//printf("want_start = %d, _call_interval = %d \n", want_start, _call_interval);
-
                     /* if we need to start the poll state machine, do it */
                     if (want_start)
                     {
-                        #if 0
                         start();
-						#else
-                        /* schedule a cycle to start things */
-                        work_queue(HPWORK, &_work, (worker_t)&MPU6050::cycle_trampoline, this, 1);
-						#endif
-
                     }
 
                     return OK;
@@ -1114,16 +1106,23 @@ MPU6050::start()
     _accel_reports->flush();
     _gyro_reports->flush();
 
-	//printf("_call_interval = %d \n", _call_interval);
-
+    #if 0
     /* start polling at the specified rate */
-    //hrt_call_every(&_call, 1000, _call_interval, (hrt_callout)&MPU6050::measure_trampoline, this);
+    hrt_call_every(&_call, 1000, _call_interval, (hrt_callout)&MPU6050::measure_trampoline, this);
+	#else
+    /* schedule a cycle to start things */
+    work_queue(HPWORK, &_work, (worker_t)&MPU6050::cycle_trampoline, this, 1);
+	#endif
 }
 
 void
 MPU6050::stop()
 {
+    #if 0
     hrt_cancel(&_call);
+	#else
+	work_cancel(HPWORK, &_work);
+	#endif
 }
 
 void
@@ -1177,8 +1176,6 @@ MPU6050::measure()
     mpu_report.cmd = MPUREG_INT_STATUS;
     if (OK != transfer((uint8_t *)&mpu_report, 1, ((uint8_t *)&(mpu_report.status)), (sizeof(mpu_report) -1 )))
         return;
-
-	read_reg(MPUREG_INT_STATUS);
 
     /* count measurement */
     _reads++;
@@ -1316,7 +1313,7 @@ MPU6050::cycle()
            &_work,
            (worker_t)&MPU6050::cycle_trampoline,
            this,
-           USEC2TICK(1000000 / 1000));
+           USEC2TICK(_call_interval));
 }
 
 int
@@ -1529,6 +1526,9 @@ test()
 
 
     /* XXX add poll-rate tests here too */
+
+	if (ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT) < 0)
+		err(1, "reset to manual polling");
 
     //reset();
     errx(0, "PASS");
