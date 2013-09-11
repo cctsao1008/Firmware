@@ -124,7 +124,7 @@ accel(int argc, char *argv[])
 	ret = read(fd, &buf, sizeof(buf));
 
 	if (ret != sizeof(buf)) {
-		printf("\tACCEL: read1 fail (%d)\n", ret);
+		printf("\tACCEL: read fail (%d)\n", ret);
 		return ERROR;
 
 	} else {
