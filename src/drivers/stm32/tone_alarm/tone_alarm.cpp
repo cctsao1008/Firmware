@@ -831,15 +831,6 @@ ToneAlarm   *g_dev;
 #undef  REG(_reg)
 #define REG(_reg)   (*(volatile uint32_t *)(BEEP_TIMER_BASE + _reg))
 
-#define rCR1        REG(STM32_GTIM_CR1_OFFSET)
-#define rCR2        REG(STM32_GTIM_CR2_OFFSET)
-#define rDIER       REG(STM32_GTIM_DIER_OFFSET)
-#define rSR         REG(STM32_GTIM_SR_OFFSET)
-#define rEGR        REG(STM32_GTIM_EGR_OFFSET)
-#define rCNT        REG(STM32_GTIM_CNT_OFFSET)
-#define rPSC        REG(STM32_GTIM_PSC_OFFSET)
-#define rARR        REG(STM32_GTIM_ARR_OFFSET)
-
 void
 beep_tim_init(void)
 {
@@ -851,10 +842,9 @@ beep_tim_init(void)
     rCR2 = 0;
 
     rDIER = GTIM_DIER_UIE;
-    rDCR = 0;
 
-    /* configure the timer to free-run at 84MHz */
-    rPSC = (BEEP_TIMER_CLOCK / 84000000) - 1;   /* this really only works for whole-MHz clocks */
+    /* configure the timer to free-run at 12MHz */
+    rPSC = (BEEP_TIMER_CLOCK / 12000000) - 1;   /* this really only works for whole-MHz clocks */
 
     /* run the full span of the counter */
     rARR = 0xffff;
