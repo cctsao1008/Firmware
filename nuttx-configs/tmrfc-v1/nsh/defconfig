@@ -46,7 +46,7 @@ CONFIG_DEBUG_VERBOSE=y
 # CONFIG_DEBUG_USB is not set
 # CONFIG_DEBUG_DMA is not set
 # CONFIG_DEBUG_INPUT is not set
-CONFIG_DEBUG_I2C=y
+# CONFIG_DEBUG_I2C is not set
 
 #
 # System Type
