@@ -5,6 +5,7 @@
 *.dSYM
 *.o
 *.pyc
+*.patch
 *~
 .*.swp
 .context
