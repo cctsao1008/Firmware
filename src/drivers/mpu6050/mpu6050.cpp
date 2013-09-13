@@ -841,9 +841,7 @@ MPU6050::ioctl(struct file *filp, int cmd, unsigned long arg)
 
                     /* if we need to start the poll state machine, do it */
                     if (want_start)
-                    {
                         start();
-                    }
 
                     return OK;
                 }
@@ -1096,7 +1094,7 @@ void
 MPU6050::start()
 {
     /* make sure we are stopped first */
-    stop();
+    //stop();
 
     /* discard any stale data in the buffers */
     _accel_reports->flush();
