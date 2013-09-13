@@ -117,7 +117,6 @@
 
 #include <systemlib/err.h>
 
-#if defined(GPIO_TONE_ALARM)
 /* Tone alarm configuration */
 #if   TONE_ALARM_TIMER == 2
 # define TONE_ALARM_BASE        STM32_TIM2_BASE
@@ -196,6 +195,20 @@
 # error Must set TONE_ALARM_CHANNEL to a value between 1 and 4 to use this driver.
 #endif
 
+#ifdef CONFIG_ARCH_BOARD_TMRFC_V1
+
+#if BEEP_TONE_ALARM_TIMER == 6
+# define BEEP_TONE_ALARM_BASE        STM32_TIM6_BASE
+# define BEEP_TONE_ALARM_POWER_REG   STM32_RCC_APB1ENR
+# define BEEP_TONE_ALARM_POWER_BIT   RCC_APB1ENR_TIM6EN
+# define BEEP_TONE_ALARM_VECTOR      STM32_IRQ_TIM6
+# define BEEP_TONE_ALARM_CLOCK       STM32_APB1_TIM6_CLKIN
+# if CONFIG_STM32_TIM6
+#  error must not set CONFIG_STM32_TIM6=y
+# endif
+#endif
+
+#endif
 
 /*
  * Timer register accessors
@@ -361,6 +374,10 @@ ToneAlarm::init()
     /* configure the GPIO to the idle state */
     stm32_configgpio(GPIO_TONE_ALARM_IDLE);
 
+    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+    stm32_configgpio(GPIO_BEEP_TONE_ALARM_IDLE);
+    #endif
+
     /* clock/power on our timer */
     modifyreg32(STM32_RCC_APB1ENR, 0, TONE_ALARM_CLOCK_ENABLE);
 
@@ -475,8 +492,9 @@ ToneAlarm::start_note(unsigned note)
     // configure the GPIO to enable timer output
     stm32_configgpio(GPIO_TONE_ALARM);
 
-    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1) && defined(GPIO_BEEP_ALARM_ENABLE)
-    up_enable_irq(BEEP_TIMER_VECTOR);
+    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1) && defined(GPIO_BEEP_TONE_ALARM_ENABLE)
+    stm32_configgpio(GPIO_BEEP_TONE_ALARM);
+    up_enable_irq(BEEP_TONE_ALARM_VECTOR);
     #endif
 }
 
@@ -491,9 +509,9 @@ ToneAlarm::stop_note()
      */
     stm32_configgpio(GPIO_TONE_ALARM_IDLE);
 
-    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1) && defined(GPIO_BEEP_ALARM_ENABLE)
-    stm32_configgpio(GPIO_BEEP_ALARM);
-    up_disable_irq(BEEP_TIMER_VECTOR);
+    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1) && defined(GPIO_BEEP_TONE_ALARM_ENABLE)
+    stm32_configgpio(GPIO_BEEP_TONE_ALARM_IDLE);
+    up_disable_irq(BEEP_TONE_ALARM_VECTOR);
     #endif
 }
 
@@ -829,13 +847,13 @@ ToneAlarm   *g_dev;
  * Timer register accessors
  */
 #undef  REG(_reg)
-#define REG(_reg)   (*(volatile uint32_t *)(BEEP_TIMER_BASE + _reg))
+#define REG(_reg)   (*(volatile uint32_t *)(BEEP_TONE_ALARM_BASE + _reg))
 
 void
 beep_tim_init(void)
 {
     /* clock/power on our timer */
-    modifyreg32(BEEP_TIMER_POWER_REG, 0, BEEP_TIMER_POWER_BIT);
+    modifyreg32(BEEP_TONE_ALARM_POWER_REG, 0, BEEP_TONE_ALARM_POWER_BIT);
 
     /* disable and configure the timer */
     rCR1 = 0;
@@ -844,7 +862,7 @@ beep_tim_init(void)
     rDIER = GTIM_DIER_UIE;
 
     /* configure the timer to free-run at 12MHz */
-    rPSC = (BEEP_TIMER_CLOCK / 12000000) - 1;   /* this really only works for whole-MHz clocks */
+    rPSC = (BEEP_TONE_ALARM_CLOCK / 12000000) - 1;   /* this really only works for whole-MHz clocks */
 
     /* run the full span of the counter */
     rARR = 0xffff;
@@ -936,16 +954,12 @@ tone_alarm_main(int argc, char *argv[])
             delete g_dev;
             errx(1, "ToneAlarm init failed");
         }
-        #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
-        else
-        {
-            /* claim our interrupt vector */
-            irq_attach(BEEP_TIMER_VECTOR, beep_tim_isr);
-            stm32_configgpio(GPIO_BEEP_ALARM);
-            beep_tim_init();
-        }
+        
+        #if defined(CONFIG_ARCH_BOARD_TMRFC_V1) && defined(GPIO_BEEP_TONE_ALARM_ENABLE)
+        beep_tim_init();
+        /* claim our interrupt vector */
+        irq_attach(BEEP_TONE_ALARM_VECTOR, beep_tim_isr);
         #endif
-
     }
 
 
@@ -996,5 +1010,4 @@ tone_alarm_main(int argc, char *argv[])
 
     errx(1, "unrecognized command, try 'start', 'stop', an alarm number or name, or a file name starting with a '/'");
 }
-#endif
 
