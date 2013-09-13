@@ -196,11 +196,10 @@ protected:
 private:
     MPU6050_gyro        *_gyro;
     uint8_t         _product;   /** product code */
-	uint8_t         _who_am_i;   /** id code */
 
     struct hrt_call     _call;
     unsigned        _call_interval;
-	work_s          _work;
+    work_s          _work;
 
     typedef RingBuffer<accel_report> AccelReportBuffer;
     AccelReportBuffer   *_accel_reports;
@@ -296,7 +295,7 @@ private:
      * @param       The register to read.
      * @return      The value that was read.
      */
-    uint8_t         read_reg(unsigned reg);
+    uint8_t         read_reg(uint8_t reg);
 
     /**
      * Write a register in the MPU6050
@@ -304,7 +303,7 @@ private:
      * @param reg       The register to write.
      * @param value     The new value to write.
      */
-    void            write_reg(unsigned reg, uint8_t value);
+    void            write_reg(uint8_t reg, uint8_t value);
 
     /**
      * Modify a register in the MPU6050
@@ -315,7 +314,7 @@ private:
      * @param clearbits Bits in the register to clear.
      * @param setbits   Bits in the register to set.
      */
-    void            modify_reg(unsigned reg, uint8_t clearbits, uint8_t setbits);
+    void            modify_reg(uint8_t reg, uint8_t clearbits, uint8_t setbits);
 
     /**
      * Set the MPU6050 measurement range.
@@ -429,6 +428,7 @@ MPU6050::MPU6050(int bus) :
     _gyro_scale.z_scale  = 1.0f;
 
     memset(&_call, 0, sizeof(_call));
+    memset(&_work, 0, sizeof(_work));
 }
 
 MPU6050::~MPU6050()
@@ -460,7 +460,7 @@ MPU6050::init()
 
     /* if probe/setup failed, bail now */
     if (ret != OK) {
-		debug("I2C setup failed");
+        debug("I2C setup failed");
         return ret;
     }
 
@@ -596,14 +596,14 @@ int
 MPU6050::probe()
 {
     /* look for a product ID we recognise */
-    _who_am_i = read_reg(MPUREG_WHO_AM_I);
+    _product = read_reg(MPUREG_WHO_AM_I);
 
-    //if(_who_am_i == MPU6050_WHO_AM_I)
+    if(_product == MPU6050_WHO_AM_I)
     {
         return OK;
     }
 
-    debug("unexpected WHO_AM_I 0x%02x", _who_am_i);
+    debug("unexpected WHO_AM_I 0x%02x", _product);
     return -EIO;
 
 }
@@ -812,7 +812,7 @@ MPU6050::ioctl(struct file *filp, int cmd, unsigned long arg)
                 /* adjust to a legal polling interval in Hz */
             default: {
 
-			        /* do we need to start internal polling? */
+                    /* do we need to start internal polling? */
                     bool want_start = (_call_interval == 0);
 
                     /* convert hz to hrt interval via microseconds */
@@ -1023,30 +1023,24 @@ MPU6050::gyro_ioctl(struct file *filp, int cmd, unsigned long arg)
 }
 
 uint8_t
-MPU6050::read_reg(unsigned reg)
+MPU6050::read_reg(uint8_t reg)
 {
-    uint8_t cmd[2];
+    uint8_t val;
 
-    cmd[0] = reg;
-
-    transfer(&cmd[0], 1, &cmd[1], 1);
-
-    return cmd[1];
+    transfer(&reg, 1, &val, 1);
+    return val;
 }
 
 void
-MPU6050::write_reg(unsigned reg, uint8_t value)
+MPU6050::write_reg(uint8_t reg, uint8_t value)
 {
-    uint8_t cmd[2];
-
-    cmd[0] = reg;
-    cmd[1] = value;
+    uint8_t cmd[] = { reg, value };
 
     transfer(&cmd[0], 2, nullptr, 0);
 }
 
 void
-MPU6050::modify_reg(unsigned reg, uint8_t clearbits, uint8_t setbits)
+MPU6050::modify_reg(uint8_t reg, uint8_t clearbits, uint8_t setbits)
 {
     uint8_t val;
 
@@ -1102,7 +1096,7 @@ void
 MPU6050::start()
 {
     /* make sure we are stopped first */
-    //stop();
+    stop();
 
     /* discard any stale data in the buffers */
     _accel_reports->flush();
@@ -1111,10 +1105,10 @@ MPU6050::start()
     #if 0
     /* start polling at the specified rate */
     hrt_call_every(&_call, 1000, _call_interval, (hrt_callout)&MPU6050::measure_trampoline, this);
-	#else
+    #else
     /* schedule a cycle to start things */
     work_queue(HPWORK, &_work, (worker_t)&MPU6050::cycle_trampoline, this, _call_interval);
-	#endif
+    #endif
 }
 
 void
@@ -1122,9 +1116,9 @@ MPU6050::stop()
 {
     #if 0
     hrt_cancel(&_call);
-	#else
-	work_cancel(HPWORK, &_work);
-	#endif
+    #else
+    work_cancel(HPWORK, &_work);
+    #endif
 }
 
 void
@@ -1132,17 +1126,15 @@ MPU6050::measure_trampoline(void *arg)
 {
     MPU6050 *dev = reinterpret_cast<MPU6050 *>(arg);
 
-	//printf("measure_trampoline!!\n");
-
     /* make another measurement */
-	dev->measure();
+    dev->measure();
 }
 
 void
 MPU6050::measure()
 {
 #pragma pack(push, 1)
-	/**
+    /**
      * Report conversation within the MPU6050, including command byte and
      * interrupt status.
      */
@@ -1167,9 +1159,9 @@ MPU6050::measure()
         int16_t     gyro_x;
         int16_t     gyro_y;
         int16_t     gyro_z;
-	} report;
+    } report;
 
-	/* start measuring */
+    /* start measuring */
     perf_begin(_sample_perf);
 
     /*
@@ -1275,13 +1267,13 @@ MPU6050::measure()
     grb.z = _gyro_filter_z.apply(z_gyro_in_new);
 
     grb.scaling = _gyro_range_scale;
-	grb.range_rad_s = _gyro_range_rad_s;
+    grb.range_rad_s = _gyro_range_rad_s;
 
-	grb.temperature_raw = report.temp;
-	grb.temperature = (report.temp) / 361.0f + 35.0f;
+    grb.temperature_raw = report.temp;
+    grb.temperature = (report.temp) / 361.0f + 35.0f;
 
-	_accel_reports->put(arb);
-	_gyro_reports->put(grb);
+    _accel_reports->put(arb);
+    _gyro_reports->put(grb);
 
     /* notify anyone waiting for data */
     poll_notify(POLLIN);
@@ -1294,7 +1286,7 @@ MPU6050::measure()
     }
 
     /* stop measuring */
-	perf_end(_sample_perf);
+    perf_end(_sample_perf);
 }
 
 void
@@ -1442,34 +1434,6 @@ test()
     gyro_report g_report;
     ssize_t sz;
 
-    #pragma pack(push, 1)
-	/**
-     * Report conversation within the MPU6050, including command byte and
-     * interrupt status.
-     */
-    struct MPUReport {
-        uint8_t     cmd;
-        uint8_t     status;
-        uint8_t     accel_x[2];
-        uint8_t     accel_y[2];
-        uint8_t     accel_z[2];
-        uint8_t     temp[2];
-        uint8_t     gyro_x[2];
-        uint8_t     gyro_y[2];
-        uint8_t     gyro_z[2];
-    } mpu_report;
-#pragma pack(pop)
-
-    struct Report {
-        int16_t     accel_x;
-        int16_t     accel_y;
-        int16_t     accel_z;
-        int16_t     temp;
-        int16_t     gyro_x;
-        int16_t     gyro_y;
-        int16_t     gyro_z;
-	} report;
-
     /* get the driver */
     int fd = open(ACCEL_DEVICE_PATH, O_RDONLY);
 
@@ -1529,8 +1493,8 @@ test()
 
     /* XXX add poll-rate tests here too */
 
-	if (ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT) < 0)
-		err(1, "reset to manual polling");
+    if (ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT) < 0)
+        err(1, "reset to manual polling");
 
     //reset();
     errx(0, "PASS");
