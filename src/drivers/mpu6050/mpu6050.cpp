@@ -74,6 +74,8 @@
 #include <drivers/drv_gyro.h>
 #include <mathlib/math/filter/LowPassFilter2p.hpp>
 
+#include "mpu6050.h"
+
 #define MPU6050_ADDRESS        TMR_I2C_OBDEV_MPU6050
 
 // MPU 6050 registers
@@ -581,7 +583,7 @@ void MPU6050::reset()
     // INT CFG => Interrupt on Data Ready
     write_reg(MPUREG_INT_ENABLE, BIT_RAW_RDY_EN);        // INT: Raw data ready
     usleep(1000);
-    write_reg(MPUREG_INT_PIN_CFG, BIT_INT_ANYRD_2CLEAR); // INT: Clear on any read
+    write_reg(MPUREG_INT_PIN_CFG, BIT_INT_ANYRD_2CLEAR | (1 << MPU6050_INTCFG_I2C_BYPASS_EN_BIT)); // INT: Clear on any read
     usleep(1000);
 
     // Oscillator set
@@ -1111,7 +1113,7 @@ MPU6050::start()
     hrt_call_every(&_call, 1000, _call_interval, (hrt_callout)&MPU6050::measure_trampoline, this);
 	#else
     /* schedule a cycle to start things */
-    work_queue(HPWORK, &_work, (worker_t)&MPU6050::cycle_trampoline, this, 1);
+    work_queue(HPWORK, &_work, (worker_t)&MPU6050::cycle_trampoline, this, _call_interval);
 	#endif
 }
 

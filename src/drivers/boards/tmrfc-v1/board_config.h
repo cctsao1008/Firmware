@@ -119,7 +119,7 @@ __BEGIN_DECLS
 #define GPIO_BEEP_TONE_ALARM       (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_PORTB|GPIO_PIN12)
 
 /* The tone alarm is enough to wake my wife when I was work at night, DISABLE it !! */
-#if 1
+#if 0
 #define GPIO_BEEP_TONE_ALARM_ENABLE       1
 #endif
 
