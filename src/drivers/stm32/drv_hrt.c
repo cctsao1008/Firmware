@@ -785,7 +785,7 @@ hrt_call_enter(struct hrt_call *entry)
 
     if ((call == NULL) || (entry->deadline < call->deadline)) {
         sq_addfirst(&entry->link, &callout_queue);
-        lldbg("call enter at head, reschedule\n");
+        //lldbg("call enter at head, reschedule\n");
         /* we changed the next deadline, reschedule the timer event */
         hrt_call_reschedule();
 
@@ -823,7 +823,7 @@ hrt_call_invoke(void)
             break;
 
         sq_rem(&call->link, &callout_queue);
-        lldbg("call pop\n");
+        //lldbg("call pop\n");
 
         /* save the intended deadline for periodic calls */
         deadline = call->deadline;
@@ -833,7 +833,7 @@ hrt_call_invoke(void)
 
         /* invoke the callout (if there is one) */
         if (call->callout) {
-            lldbg("call %p: %p(%p)\n", call, call->callout, call->arg);
+            //lldbg("call %p: %p(%p)\n", call, call->callout, call->arg);
             call->callout(call->arg);
         }
 
@@ -870,19 +870,19 @@ hrt_call_reschedule()
      * hrt_absolute_time runs at least once per timer period.
      */
     if (next != NULL) {
-        lldbg("entry in queue\n");
+        //lldbg("entry in queue\n");
         if (next->deadline <= (now + HRT_INTERVAL_MIN)) {
-            lldbg("pre-expired\n");
+            //lldbg("pre-expired\n");
             /* set a minimal deadline so that we call ASAP */
             deadline = now + HRT_INTERVAL_MIN;
 
         } else if (next->deadline < deadline) {
-            lldbg("due soon\n");
+            //lldbg("due soon\n");
             deadline = next->deadline;
         }
     }
 
-    lldbg("schedule for %u at %u\n", (unsigned)(deadline & 0xffffffff), (unsigned)(now & 0xffffffff));
+    //lldbg("schedule for %u at %u\n", (unsigned)(deadline & 0xffffffff), (unsigned)(now & 0xffffffff));
 
     /* set the new compare value and remember it for latency tracking */
     rCCR_HRT = latency_baseline = deadline & 0xffff;

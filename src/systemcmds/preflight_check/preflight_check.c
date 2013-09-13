@@ -69,7 +69,7 @@ int preflight_check_main(int argc, char *argv[])
 	bool fail_on_error = false;
 
 	if (argc > 1 && !strcmp(argv[1], "--help")) {
-		warnx("usage: preflight_check [--fail-on-error]\n\tif fail on error is enabled, will return 1 on error");
+		warnx("usage: preflight_check [--fail-on-error]\n\tif fail on error is enabled, will return 1 on error \n");
 		exit(1);
 	}
 
@@ -92,7 +92,7 @@ int preflight_check_main(int argc, char *argv[])
 	close(fd);
 	fd = open(MAG_DEVICE_PATH, 0);
 	if (fd < 0) {
-		warn("failed to open magnetometer - start with 'hmc5883 start' or 'lsm303d start'");
+		warn("failed to open magnetometer - start with 'hmc5883 start' or 'lsm303d start' \n");
 		mavlink_log_critical(mavlink_fd, "SENSOR FAIL: NO MAG");
 		system_ok = false;
 		goto system_eval;
@@ -100,7 +100,7 @@ int preflight_check_main(int argc, char *argv[])
 	ret = ioctl(fd, MAGIOCSELFTEST, 0);
 	
 	if (ret != OK) {
-		warnx("magnetometer calibration missing or bad - calibrate magnetometer first");
+		warnx("magnetometer calibration missing or bad - calibrate magnetometer first \n");
 		mavlink_log_critical(mavlink_fd, "SENSOR FAIL: MAG CHECK/CAL");
 		system_ok = false;
 		goto system_eval;
@@ -113,7 +113,7 @@ int preflight_check_main(int argc, char *argv[])
 	ret = ioctl(fd, ACCELIOCSELFTEST, 0);
 	
 	if (ret != OK) {
-		warnx("accel self test failed");
+		warnx("accel self test failed\n");
 		mavlink_log_critical(mavlink_fd, "SENSOR FAIL: ACCEL CHECK/CAL");
 		system_ok = false;
 		goto system_eval;
@@ -126,7 +126,7 @@ int preflight_check_main(int argc, char *argv[])
 	ret = ioctl(fd, GYROIOCSELFTEST, 0);
 	
 	if (ret != OK) {
-		warnx("gyro self test failed");
+		warnx("gyro self test failed\n");
 		mavlink_log_critical(mavlink_fd, "SENSOR FAIL: GYRO CHECK/CAL");
 		system_ok = false;
 		goto system_eval;
@@ -144,7 +144,7 @@ int preflight_check_main(int argc, char *argv[])
 
 	/* warn */
 	if (!rc_ok)
-		warnx("rc calibration test failed");
+		warnx("rc calibration test failed \n");
 
 	/* require RC ok to keep system_ok */
 	system_ok &= rc_ok;
@@ -160,7 +160,7 @@ system_eval:
 	} else {
 		fflush(stdout);
 
-		warnx("PREFLIGHT CHECK ERROR! TRIGGERING ALARM");
+		warnx("PREFLIGHT CHECK ERROR! TRIGGERING ALARM \n");
 		fflush(stderr);
 
 		int buzzer = open("/dev/tone_alarm", O_WRONLY);
@@ -168,7 +168,7 @@ system_eval:
 
 		if (leds < 0) {
 			close(buzzer);
-			errx(1, "failed to open leds, aborting");
+			errx(1, "failed to open leds, aborting \n");
 		}
 
 		/* flip blue led into alternating amber */

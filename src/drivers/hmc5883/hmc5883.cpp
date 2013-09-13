@@ -82,7 +82,7 @@
 #endif
 
 /* Max measurement rate is 160Hz */
-#define HMC5883_CONVERSION_INTERVAL	(1000000 / 160)	/* microseconds */
+#define HMC5883_CONVERSION_INTERVAL	(1000000 / 50)	/* microseconds */
 
 #define ADDR_CONF_A			0x00
 #define ADDR_CONF_B			0x01
@@ -171,6 +171,8 @@ private:
 	bool			_sensor_ok;		/**< sensor was found and reports ok */
 	bool			_calibrated;		/**< the calibration is valid */
 
+	int			_bus;			/**< the bus the device is connected to */
+
 	/**
 	 * Test whether the device supported by the driver is present at a
 	 * specific address.
@@ -192,6 +194,11 @@ private:
 	 * Stop the automatic measurement state machine.
 	 */
 	void			stop();
+
+	/**
+	 * Reset the device
+	 */
+	int			reset();
 
 	/**
 	 * Perform the on-sensor scale calibration routine.
@@ -308,7 +315,7 @@ private:
 };
 
 /* helper macro for handling report buffer indices */
-#define INCREMENT(_x, _lim)	do { _x++; if (_x >= _lim) _x = 0; } while(0)
+#define INCREMENT(_x, _lim)	do { __typeof__(_x) _tmp = _x+1; if (_tmp >= _lim) _tmp = 0; _x = _tmp; } while(0)
 
 /*
  * Driver 'main' command.
@@ -330,7 +337,8 @@ HMC5883::HMC5883(int bus) :
 	_comms_errors(perf_alloc(PC_COUNT, "hmc5883_comms_errors")),
 	_buffer_overflows(perf_alloc(PC_COUNT, "hmc5883_buffer_overflows")),
 	_sensor_ok(false),
-	_calibrated(false)
+	_calibrated(false),
+	_bus(bus)
 {
 	// enable debug() calls
 	_debug_enabled = false;
@@ -355,6 +363,11 @@ HMC5883::~HMC5883()
 	/* free any existing reports */
 	if (_reports != nullptr)
 		delete[] _reports;
+
+	// free perf counters
+	perf_free(_sample_perf);
+	perf_free(_comms_errors);
+	perf_free(_buffer_overflows);
 }
 
 int
@@ -365,6 +378,9 @@ HMC5883::init()
 	/* do I2C init (and probe) first */
 	if (I2C::init() != OK)
 		goto out;
+
+	/* reset the device configuration */
+	reset();
 
 	/* allocate basic report buffers */
 	_num_reports = 2;
@@ -381,9 +397,6 @@ HMC5883::init()
 
 	if (_mag_topic < 0)
 		debug("failed to create sensor_mag object");
-
-	/* set range */
-	set_range(_range_ga);
 
 	ret = OK;
 	/* sensor is ok, but not calibrated */
@@ -549,6 +562,7 @@ HMC5883::ioctl(struct file *filp, int cmd, unsigned long arg)
 
 				/* switching to manual polling */
 			case SENSOR_POLLRATE_MANUAL:
+				printf("SENSOR_POLLRATE_MANUAL\n");
 				stop();
 				_measure_ticks = 0;
 				return OK;
@@ -568,6 +582,8 @@ HMC5883::ioctl(struct file *filp, int cmd, unsigned long arg)
 
 					/* set interval for next measurement to minimum legal value */
 					_measure_ticks = USEC2TICK(HMC5883_CONVERSION_INTERVAL);
+
+					printf("SENSOR_POLLRATE_DEFAULT %d, %d\n",want_start, _measure_ticks);
 
 					/* if we need to start the poll state machine, do it */
 					if (want_start)
@@ -591,6 +607,8 @@ HMC5883::ioctl(struct file *filp, int cmd, unsigned long arg)
 					/* update interval for next measurement */
 					_measure_ticks = ticks;
 
+					printf("default %d, %d\n",want_start, _measure_ticks);
+
 					/* if we need to start the poll state machine, do it */
 					if (want_start)
 						start();
@@ -604,7 +622,7 @@ HMC5883::ioctl(struct file *filp, int cmd, unsigned long arg)
 		if (_measure_ticks == 0)
 			return SENSOR_POLLRATE_MANUAL;
 
-		return (1000 / _measure_ticks);
+		return 1000000/TICK2USEC(_measure_ticks);
 
 	case SENSORIOCSQUEUEDEPTH: {
 			/* add one to account for the sentinel in the ring */
@@ -634,17 +652,24 @@ HMC5883::ioctl(struct file *filp, int cmd, unsigned long arg)
 		return _num_reports - 1;
 
 	case SENSORIOCRESET:
-		/* XXX implement this */
-		return -EINVAL;
+		return reset();
 
 	case MAGIOCSSAMPLERATE:
-		/* not supported, always 1 sample per poll */
-		return -EINVAL;
+		/* same as pollrate because device is in single measurement mode*/
+		return ioctl(filp, SENSORIOCSPOLLRATE, arg);
+
+	case MAGIOCGSAMPLERATE:
+		/* same as pollrate because device is in single measurement mode*/
+		return 1000000/TICK2USEC(_measure_ticks);
 
 	case MAGIOCSRANGE:
 		return set_range(arg);
 
+	case MAGIOCGRANGE:
+		return _range_ga;
+
 	case MAGIOCSLOWPASS:
+	case MAGIOCGLOWPASS:
 		/* not supported, no internal filtering */
 		return -EINVAL;
 
@@ -669,6 +694,16 @@ HMC5883::ioctl(struct file *filp, int cmd, unsigned long arg)
 	case MAGIOCSELFTEST:
 		return check_calibration();
 
+	case MAGIOCGEXTERNAL:
+	    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+		if (_bus == TMR_I2C_BUS_EXPANSION)
+		#else
+		if (_bus == PX4_I2C_BUS_EXPANSION)
+		#endif
+			return 1;
+		else
+			return 0;
+
 	default:
 		/* give it to the superclass */
 		return I2C::ioctl(filp, cmd, arg);
@@ -690,6 +725,13 @@ void
 HMC5883::stop()
 {
 	work_cancel(HPWORK, &_work);
+}
+
+int
+HMC5883::reset()
+{
+	/* set range */
+	return set_range(_range_ga);
 }
 
 void
@@ -855,10 +897,11 @@ HMC5883::collect()
 		_reports[_next_report].z = ((report.z * _range_scale) - _scale.z_offset) * _scale.z_scale;
 	} else {
 #endif
-		/* XXX axis assignment of external sensor is yet unknown */
-		_reports[_next_report].x = ((report.y * _range_scale) - _scale.x_offset) * _scale.x_scale;
+		/* the standard external mag by 3DR has x pointing to the right, y pointing backwards, and z down,
+		 * therefore switch x and y and invert y */
+		_reports[_next_report].x = ((((report.y == -32768) ? 32767 : -report.y) * _range_scale) - _scale.x_offset) * _scale.x_scale;
 		/* flip axes and negate value for y */
-		_reports[_next_report].y = ((((report.x == -32768) ? 32767 : -report.x) * _range_scale) - _scale.y_offset) * _scale.y_scale;
+		_reports[_next_report].y = ((report.x * _range_scale) - _scale.y_offset) * _scale.y_scale;
 		/* z remains z */
 		_reports[_next_report].z = ((report.z * _range_scale) - _scale.z_offset) * _scale.z_scale;
 #ifdef PX4_I2C_BUS_ONBOARD
@@ -933,11 +976,12 @@ int HMC5883::calibrate(struct file *filp, unsigned enable)
 	warnx("sampling 500 samples for scaling offset");
 
 	/* set the queue depth to 10 */
-	if (OK != ioctl(filp, SENSORIOCSQUEUEDEPTH, 10)) {
-		warn("failed to set queue depth");
-		ret = 1;
-		goto out;
-	}
+	/* don't do this for now, it can lead to a crash in start() respectively work_queue() */
+//	if (OK != ioctl(filp, SENSORIOCSQUEUEDEPTH, 10)) {
+//		warn("failed to set queue depth");
+//		ret = 1;
+//		goto out;
+//	}
 
 	/* start the sensor polling at 50 Hz */
 	if (OK != ioctl(filp, SENSORIOCSPOLLRATE, 50)) {
@@ -1307,6 +1351,10 @@ test()
 	if (fd < 0)
 		err(1, "%s open failed (try 'hmc5883 start' if the driver is not running", MAG_DEVICE_PATH);
 
+	/* set the queue depth to 10 */
+	if (OK != ioctl(fd, SENSORIOCSQUEUEDEPTH, 10))
+		errx(1, "failed to set queue depth");
+
 	/* do a simple demand read */
 	sz = read(fd, &report, sizeof(report));
 
@@ -1317,7 +1365,12 @@ test()
 	warnx("measurement: %.6f  %.6f  %.6f", (double)report.x, (double)report.y, (double)report.z);
 	warnx("time:        %lld", report.timestamp);
 
-	/* set the queue depth to 10 */
+	/* check if mag is onboard or external */
+	if ((ret = ioctl(fd, MAGIOCGEXTERNAL, 0)) < 0)
+		errx(1, "failed to get if mag is onboard or external");
+	warnx("device active: %s", ret ? "external" : "onboard");
+
+	/* set the queue depth to 5 */
 	if (OK != ioctl(fd, SENSORIOCSQUEUEDEPTH, 10))
 		errx(1, "failed to set queue depth");
 
