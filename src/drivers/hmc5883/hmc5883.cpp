@@ -81,8 +81,13 @@
 #define HMC5883L_ADDRESS        PX4_I2C_OBDEV_HMC5883
 #endif
 
+#if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+/* Max measurement rate is 60Hz due to we are using I2C gyro and accel (mpu6050), more busy on I2C bus !! */
+#define HMC5883_CONVERSION_INTERVAL (1000000 / 60) /* Notice !!! microseconds, must not lower than 60 (sensor.cpp L:943) */
+#else
 /* Max measurement rate is 160Hz */
-#define HMC5883_CONVERSION_INTERVAL (1000000 / 110) /* Notice !!! microseconds, must not lower than 100 (sensor.cpp L:943) */
+#define HMC5883_CONVERSION_INTERVAL (1000000 / 160)
+#endif
 
 #define ADDR_CONF_A             0x00
 #define ADDR_CONF_B             0x01
@@ -362,7 +367,7 @@ HMC5883::~HMC5883()
 
     /* free any existing reports */
     if (_reports != nullptr)
-        delete _reports;
+        delete[] _reports;
 
     // free perf counters
     perf_free(_sample_perf);
@@ -562,7 +567,6 @@ HMC5883::ioctl(struct file *filp, int cmd, unsigned long arg)
 
                 /* switching to manual polling */
             case SENSOR_POLLRATE_MANUAL:
-                printf("SENSOR_POLLRATE_MANUAL\n");
                 stop();
                 _measure_ticks = 0;
                 return OK;
@@ -583,10 +587,8 @@ HMC5883::ioctl(struct file *filp, int cmd, unsigned long arg)
                     /* set interval for next measurement to minimum legal value */
                     _measure_ticks = USEC2TICK(HMC5883_CONVERSION_INTERVAL);
 
-                    printf("SENSOR_POLLRATE_DEFAULT %d, %d\n",want_start, _measure_ticks);
-
-                    /* if we need to start the poll state machine, do it */
-                    if (want_start)
+                /* if we need to start the poll state machine, do it */
+                if (want_start)
                         start();
 
                     return OK;
@@ -605,12 +607,10 @@ HMC5883::ioctl(struct file *filp, int cmd, unsigned long arg)
                         return -EINVAL;
 
                     /* update interval for next measurement */
-                    _measure_ticks = ticks;
+                _measure_ticks = ticks;
 
-                    printf("default %d, %d\n",want_start, _measure_ticks);
-
-                    /* if we need to start the poll state machine, do it */
-                    if (want_start)
+                /* if we need to start the poll state machine, do it */
+                if (want_start)
                         start();
 
                     return OK;
@@ -640,7 +640,7 @@ HMC5883::ioctl(struct file *filp, int cmd, unsigned long arg)
 
             /* reset the measurement state machine with the new buffer, free the old */
             stop();
-            delete _reports;
+            delete[] _reports;
             _num_reports = arg;
             _reports = buf;
             start();
@@ -859,16 +859,22 @@ HMC5883::collect()
         (abs(report.z) > 2048))
         goto out;
 
+    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1) /* TMRFC V1.x */
+    _reports[_next_report].x_raw = report.y;
+    _reports[_next_report].y_raw = ((report.x == -32768) ? 32767 : -report.x);
+    _reports[_next_report].z_raw = ((report.z == -32768) ? 32767 : -report.z);
+    #else
     /*
-     * RAW outputs
-     *
-     * to align the sensor axes with the board, x and y need to be flipped
-     * and y needs to be negated
-     */
+    * RAW outputs
+    *
+    * to align the sensor axes with the board, x and y need to be flipped
+    * and y needs to be negated
+    */
     _reports[_next_report].x_raw = report.y;
     _reports[_next_report].y_raw = ((report.x == -32768) ? 32767 : -report.x);
     /* z remains z */
     _reports[_next_report].z_raw = report.z;
+    #endif
 
     /* scale values for output */
 
@@ -887,29 +893,10 @@ HMC5883::collect()
      *        74 from all measurements centers them around zero.
      */
 
-#if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
-
-    #ifdef TMR_I2C_BUS_ONBOARD /* TMRFC V1.x */
-    if (_bus == TMR_I2C_BUS_ONBOARD) {
-        /* to align the sensor axes with the board, x and y need to be flipped */
+#if defined(CONFIG_ARCH_BOARD_TMRFC_V1) /* TMRFC V1.x */
         _reports[_next_report].x = ((report.y * _range_scale) - _scale.x_offset) * _scale.x_scale;
-        /* flip axes and negate value for y */
         _reports[_next_report].y = ((((report.x == -32768) ? 32767 : -report.x) * _range_scale) - _scale.y_offset) * _scale.y_scale;
-        /* z remains z */
-        _reports[_next_report].z = ((report.z * _range_scale) - _scale.z_offset) * _scale.z_scale;
-    } else {
-    #endif
-        /* the standard external mag by 3DR has x pointing to the right, y pointing backwards, and z down,
-         * therefore switch x and y and invert y */
-        _reports[_next_report].x = ((((report.y == -32768) ? 32767 : -report.y) * _range_scale) - _scale.x_offset) * _scale.x_scale;
-        /* flip axes and negate value for y */
-        _reports[_next_report].y = ((report.x * _range_scale) - _scale.y_offset) * _scale.y_scale;
-        /* z remains z */
-        _reports[_next_report].z = ((report.z * _range_scale) - _scale.z_offset) * _scale.z_scale;
-    #ifdef TMR_I2C_BUS_ONBOARD
-    }
-    #endif
-
+        _reports[_next_report].z = ((((report.z == -32768) ? 32767 : -report.z) * _range_scale) - _scale.z_offset) * _scale.z_scale;
 #else /* PX4FMU V1.x */
 
     #ifdef PX4_I2C_BUS_ONBOARD
@@ -1311,6 +1298,7 @@ start()
     }
 
     #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+    #ifdef TMR_I2C_BUS_ONBOARD
     /* if this failed, attempt onboard sensor */
     if (g_dev == nullptr) {
         g_dev = new HMC5883(TMR_I2C_BUS_ONBOARD);
@@ -1318,7 +1306,9 @@ start()
             goto fail;
         }
     }
+    #endif
     #else
+    #ifdef PX4_I2C_BUS_ONBOARD
     /* if this failed, attempt onboard sensor */
     if (g_dev == nullptr) {
         g_dev = new HMC5883(PX4_I2C_BUS_ONBOARD);
@@ -1326,6 +1316,7 @@ start()
             goto fail;
         }
     }
+    #endif
     #endif
 
     if (g_dev == nullptr)
@@ -1370,7 +1361,7 @@ test()
         err(1, "%s open failed (try 'hmc5883 start' if the driver is not running", MAG_DEVICE_PATH);
 
     /* set the queue depth to 10 */
-    if (OK != ioctl(fd, SENSORIOCSQUEUEDEPTH, 12))
+    if (OK != ioctl(fd, SENSORIOCSQUEUEDEPTH, 10))
         errx(1, "failed to set queue depth");
 
     /* do a simple demand read */
@@ -1388,8 +1379,8 @@ test()
         errx(1, "failed to get if mag is onboard or external");
     warnx("device active: %s", ret ? "external" : "onboard");
 
-    /* set the queue depth to 5 */
-    if (OK != ioctl(fd, SENSORIOCSQUEUEDEPTH, 12))
+    /* set the queue depth */
+    if (OK != ioctl(fd, SENSORIOCSQUEUEDEPTH, 10))
         errx(1, "failed to set queue depth");
 
     /* start the sensor polling at 2Hz */

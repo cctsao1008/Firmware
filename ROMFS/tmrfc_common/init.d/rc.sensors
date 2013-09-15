@@ -15,8 +15,8 @@ then
 	echo "uORB started"
 fi
 
-echo "ADC >> need to implement"
-#adc start
+echo "ADC"
+adc start
 
 if mpu6050 start
 then
@@ -43,5 +43,6 @@ fi
 #
 if sensors start
 then
+	sleep 2
 	preflight_check &
 fi
