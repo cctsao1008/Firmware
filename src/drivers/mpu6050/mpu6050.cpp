@@ -156,11 +156,11 @@
 #define MPU6050_WHO_AM_I        0x68
 
 #define MPU6050_ACCEL_DEFAULT_RANGE_G                8
-#define MPU6050_ACCEL_DEFAULT_RATE                100
+#define MPU6050_ACCEL_DEFAULT_RATE                1000
 #define MPU6050_ACCEL_DEFAULT_DRIVER_FILTER_FREQ    30
 
 #define MPU6050_GYRO_DEFAULT_RANGE_G                 8
-#define MPU6050_GYRO_DEFAULT_RATE                 100
+#define MPU6050_GYRO_DEFAULT_RATE                 1000
 #define MPU6050_GYRO_DEFAULT_DRIVER_FILTER_FREQ     30
 
 #define MPU6050_DEFAULT_ONCHIP_FILTER_FREQ          42
@@ -841,9 +841,7 @@ MPU6050::ioctl(struct file *filp, int cmd, unsigned long arg)
 
                     /* if we need to start the poll state machine, do it */
                     if (want_start)
-                    {
                         start();
-                    }
 
                     return OK;
                 }
@@ -1096,7 +1094,7 @@ void
 MPU6050::start()
 {
     /* make sure we are stopped first */
-    stop();
+    //stop();
 
     /* discard any stale data in the buffers */
     _accel_reports->flush();
@@ -1168,7 +1166,7 @@ MPU6050::measure()
      * Fetch the full set of measurements from the MPU6050 in one pass.
      */
     mpu_report.cmd = MPUREG_INT_STATUS;
-    if (OK != transfer((uint8_t *)&mpu_report, 1, ((uint8_t *)&(mpu_report.status)), (sizeof(mpu_report) -1 )))
+    if (OK != transfer((uint8_t *)&mpu_report, 1, ((uint8_t *)&(mpu_report.status)), (sizeof(mpu_report) - 1 )))
         return;
 
     /* count measurement */
@@ -1187,23 +1185,28 @@ MPU6050::measure()
     report.gyro_y = int16_t_from_bytes(mpu_report.gyro_y);
     report.gyro_z = int16_t_from_bytes(mpu_report.gyro_z);
 
-#if 0
+#if 1
     /*
-     * Swap axes and negate y
+     * Swap x,y axe and negate x,z
      */
     int16_t accel_xt = report.accel_y;
     int16_t accel_yt = ((report.accel_x == -32768) ? 32767 : -report.accel_x);
+    int16_t accel_zt = ((report.accel_z == -32768) ? 32767 : -report.accel_z);
 
     int16_t gyro_xt = report.gyro_y;
     int16_t gyro_yt = ((report.gyro_x == -32768) ? 32767 : -report.gyro_x);
+    int16_t gyro_zt = ((report.gyro_z == -32768) ? 32767 : -report.gyro_z);
 
     /*
      * Apply the swap
      */
     report.accel_x = accel_xt;
     report.accel_y = accel_yt;
+    report.accel_z = accel_zt;
+
     report.gyro_x = gyro_xt;
     report.gyro_y = gyro_yt;
+    report.gyro_z = gyro_zt;
 #endif
 
     /*
