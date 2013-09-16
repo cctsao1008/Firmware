@@ -935,10 +935,10 @@ Sensors::mag_init()
     /* try different mag sampling rates */
 
     #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
-    ret = ioctl(fd, MAGIOCSSAMPLERATE, 50);
+    ret = ioctl(fd, MAGIOCSSAMPLERATE, 150);
     if (ret == OK) {
         /* set the pollrate accordingly */
-        ioctl(fd, SENSORIOCSPOLLRATE, 50);
+        ioctl(fd, SENSORIOCSPOLLRATE, 150);
     } else {
             errx(1, "FATAL: mag sampling rate could not be set");
     }

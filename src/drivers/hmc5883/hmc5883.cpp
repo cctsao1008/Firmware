@@ -83,10 +83,10 @@
 
 #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
 /* Max measurement rate is 60Hz due to we are using I2C gyro and accel (mpu6050), more busy on I2C bus !! */
-#define HMC5883_CONVERSION_INTERVAL (1000000 / 60) /* Notice !!! microseconds, must not lower than 60 (sensor.cpp L:943) */
+#define HMC5883_CONVERSION_INTERVAL (1000000 / 150) /* Notice !!! microseconds, must not lower than 60 (sensor.cpp L:943) */
 #else
 /* Max measurement rate is 160Hz */
-#define HMC5883_CONVERSION_INTERVAL (1000000 / 160)
+#define HMC5883_CONVERSION_INTERVAL (1000000 / 150)
 #endif
 
 #define ADDR_CONF_A             0x00
@@ -845,10 +845,18 @@ HMC5883::collect()
         goto out;
     }
 
+    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1) /* TMRFC V1.x */
+    /* swap the data we just received */
+    report.x = (((int16_t)hmc_report.y[0]) << 8) + hmc_report.y[1];
+    report.y = (((int16_t)hmc_report.x[0]) << 8) + hmc_report.x[1];
+    //report.z = (-1) * ((((int16_t)hmc_report.z[0]) << 8) + hmc_report.z[1]);
+    report.z = ~((((int16_t)hmc_report.z[0]) << 8) + hmc_report.z[1]) + 1;
+	#else
     /* swap the data we just received */
     report.x = (((int16_t)hmc_report.x[0]) << 8) + hmc_report.x[1];
     report.y = (((int16_t)hmc_report.y[0]) << 8) + hmc_report.y[1];
     report.z = (((int16_t)hmc_report.z[0]) << 8) + hmc_report.z[1];
+	#endif
 
     /*
      * If any of the values are -4096, there was an internal math error in the sensor.
@@ -860,9 +868,12 @@ HMC5883::collect()
         goto out;
 
     #if defined(CONFIG_ARCH_BOARD_TMRFC_V1) /* TMRFC V1.x */
-    _reports[_next_report].x_raw = report.y;
-    _reports[_next_report].y_raw = ((report.x == -32768) ? 32767 : -report.x);
-    _reports[_next_report].z_raw = ((report.z == -32768) ? 32767 : -report.z);
+	_reports[_next_report].x_raw = report.x;
+	_reports[_next_report].y_raw = report.y;
+	_reports[_next_report].z_raw = report.z;
+    //_reports[_next_report].x_raw = report.y;
+    //_reports[_next_report].y_raw = ((report.x == -32768) ? 32767 : -report.x);
+    //_reports[_next_report].z_raw = ((report.z == -32768) ? 32767 : -report.z);
     #else
     /*
     * RAW outputs
@@ -894,9 +905,12 @@ HMC5883::collect()
      */
 
 #if defined(CONFIG_ARCH_BOARD_TMRFC_V1) /* TMRFC V1.x */
-        _reports[_next_report].x = ((report.y * _range_scale) - _scale.x_offset) * _scale.x_scale;
-        _reports[_next_report].y = ((((report.x == -32768) ? 32767 : -report.x) * _range_scale) - _scale.y_offset) * _scale.y_scale;
-        _reports[_next_report].z = ((((report.z == -32768) ? 32767 : -report.z) * _range_scale) - _scale.z_offset) * _scale.z_scale;
+        _reports[_next_report].x = ((report.x * _range_scale) - _scale.x_offset) * _scale.x_scale;
+        _reports[_next_report].y = ((report.y * _range_scale) - _scale.y_offset) * _scale.y_scale;
+		_reports[_next_report].z = ((report.z * _range_scale) - _scale.z_offset) * _scale.z_scale;
+        //_reports[_next_report].x = ((report.y * _range_scale) - _scale.x_offset) * _scale.x_scale;
+        //_reports[_next_report].y = ((((report.x == -32768) ? 32767 : -report.x) * _range_scale) - _scale.y_offset) * _scale.y_scale;
+        //_reports[_next_report].z = ((((report.z == -32768) ? 32767 : -report.z) * _range_scale) - _scale.z_offset) * _scale.z_scale;
 #else /* PX4FMU V1.x */
 
     #ifdef PX4_I2C_BUS_ONBOARD
