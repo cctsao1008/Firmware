@@ -60,6 +60,12 @@
 #include "systemlib/systemlib.h"
 #include "systemlib/param/param.h"
 #include "systemlib/err.h"
+#include "backup_sram.h"
+
+#if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+//#define USING_INTERNAL_FLASH
+#define USING_INTERNAL_BKSRAM
+#endif
 
 #if !defined(PX4_I2C_BUS_ONBOARD) && !defined(TMR_I2C_BUS_ONBOARD)
 #  error PX4_I2C_BUS_ONBOARD or TMR_I2C_BUS_ONBOARD not defined, cannot locate onboard EEPROM
@@ -115,7 +121,15 @@ static void
 eeprom_attach(void)
 {
     #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+
+    #if defined(USING_INTERNAL_FLASH)
+    /* Sector 1 ~ 3, 16KB x 3 = 48KB */
     eeprom_mtd = up_flashinitialize();
+    #else if defined(USING_INTERNAL_BKSRAM)
+    /* The STM32F40x and STM32F41x feature 4 Kbytes of backup SRAM */
+    eeprom_mtd = rammtd_initialize(BKPSRAM_BASE, (4 * 1024));
+    #endif
+
     #else
     /* find the right I2C */
     struct i2c_dev_s *i2c = up_i2cinitialize(PX4_I2C_BUS_ONBOARD);
@@ -183,12 +197,19 @@ static void
 eeprom_erase(void)
 {
     #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+    
     if(started == true)
     {
          errx(0, "Erase failed !! eeprom already  mounted.");
     }
 
+    #if defined(USING_INTERNAL_FLASH)
+    /* Sector 1 ~ 3, 16KB x 3 = 48KB */
     internal_flash_erase( NULL, NULL, NULL);
+    #else if defined(USING_INTERNAL_BKSRAM)
+    /* The STM32F40x and STM32F41x feature 4 Kbytes of backup SRAM */
+    #endif
+    
     #else
     if (!attached)
         eeprom_attach();
@@ -278,7 +299,14 @@ static void
 eeprom_test(void)
 {
     #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+
+    #if defined(USING_INTERNAL_FLASH)
+    /* Sector 1 ~ 3, 16KB x 3 = 48KB */
     internal_flash_test();
+    #else if defined(USING_INTERNAL_BKSRAM)
+    /* The STM32F40x and STM32F41x feature 4 Kbytes of backup SRAM */
+    #endif
+
     #else
     at24c_test();
     #endif
