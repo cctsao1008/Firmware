@@ -50,7 +50,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#include <arch/board/board.h>
+#include <board_config.h>
 #include <drivers/drv_hrt.h>
 #include <drivers/drv_tone_alarm.h>
 
