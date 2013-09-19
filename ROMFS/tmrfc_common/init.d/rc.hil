@@ -8,7 +8,7 @@ echo "[HIL] starting.."
 uorb start
 
 # Tell MAVLink that this link is "fast"
-mavlink start -b 230400 -d /dev/ttyS0
+mavlink start -b 230400 -d /dev/ttyS2
 
 # Create a fake HIL /dev/pwm_output interface
 hil mode_pwm

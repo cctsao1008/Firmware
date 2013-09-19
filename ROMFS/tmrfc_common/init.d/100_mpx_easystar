@@ -63,6 +63,6 @@ att_pos_estimator_ekf start
 #
 # Load mixer and start controllers (depends on px4io)
 #
-mixer load /dev/pwm_output /etc/mixers/FMU_RET.mix
+mixer load /dev/pwm_output /etc/mixers/FC_RET.mix
 fw_att_control start
 fw_pos_control_l1 start
