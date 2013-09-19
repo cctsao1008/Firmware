@@ -6,24 +6,8 @@
 # Default to auto-start mode.  An init script on the microSD card
 # can change this to prevent automatic start-up of the flight script.
 #
-#set MODE autostart
+set MODE autostart
 echo "[init] MODE ="$MODE
-
-#
-# Try to mount the microSD card.
-#
-echo "[init] Looking for microSD..."
-if mount -t vfat /dev/mmcsd0 /fs/microsd
-then
-	echo "[init] Card mounted at /fs/microsd"
-	# Start playing the startup tune
-	echo "[init] tone_alarm start"
-	tone_alarm start
-else
-	echo "[init] No microSD card found"
-	# Play SOS
-	tone_alarm error
-fi
 
 #
 # Look for an init script on the microSD card.
@@ -31,28 +15,16 @@ fi
 # To prevent automatic startup in the current flight mode,
 # the script should set MODE to some other value.
 #
-if [ -f /fs/microsd/etc/rc ]
-then
-	echo "[init] Reading /fs/microsd/etc/rc"
-	sh /fs/microsd/etc/rc
-fi
-# Also consider rc.txt files
-if [ -f /fs/microsd/etc/rc.txt ]
-then
-	echo "[init] Reading /fs/microsd/etc/rc.txt"
-	sh /fs/microsd/etc/rc.txt
-fi
-
 if [ $MODE == autostart ]
 then
 	#
 	# Start terminal
 	#
-	#if sercon
-	#then
-	#	echo "USB connected"
-	#fi
-	
+	if sercon
+	then
+		echo "USB connected"
+	fi
+
 	#
 	# Start the ORB (first app to start)
 	#
@@ -72,8 +44,8 @@ then
 	#
 	# Try to get an USB console
 	#echo "Try to get an USB console"
-	#nshterm /dev/ttyACM0 &
-	
+	nshterm /dev/ttyACM0 &
+
 	#
 	# Check if auto-setup from one of the standard scripts is wanted
 	# SYS_AUTOSTART = 0 means no autostart (default)
@@ -85,14 +57,14 @@ then
 		sh /etc/init.d/08_ardrone
 		set MODE custom
 	fi
-	
+
 	if param compare SYS_AUTOSTART 9
 	then
 		echo "Load .. 09_ardrone_flow"
 		sh /etc/init.d/09_ardrone_flow
 		set MODE custom
 	fi
-	
+
 	if param compare SYS_AUTOSTART 10
 	then
 		echo "Load .. 10_dji_f330"
@@ -106,7 +78,7 @@ then
 		sh /etc/init.d/11_dji_f450
 		set MODE custom
 	fi
-	
+
 	if param compare SYS_AUTOSTART 15
 	then
 		echo "Load .. 15_tbs_discovery"
@@ -134,21 +106,21 @@ then
 		sh /etc/init.d/30_io_camflyer
 		set MODE custom
 	fi
-	
+
 	if param compare SYS_AUTOSTART 31
 	then
-	        echo "Load .. 31_io_phantom"
+		echo "Load .. 31_io_phantom"
 		sh /etc/init.d/31_io_phantom
 		set MODE custom
 	fi
-	
+
 	# Start any custom extensions that might be missing
 	if [ -f /fs/microsd/etc/rc.local ]
 	then
 		echo "[init] Reading /fs/microsd/etc/rc.local"
 		sh /fs/microsd/etc/rc.local
 	fi
-	
+
 	# If none of the autostart scripts triggered, get a minimal setup
 	if [ $MODE == autostart ]
 	then
@@ -156,16 +128,16 @@ then
 		#echo "[init] Start mavlink ( on USART6, 57600  /dev/ttyS2 )"
 		mavlink start -b 57600 -d /dev/ttyS2
 		usleep 5000
-	
+
 		# Start commander
 		echo "[init] Start commander"
 		commander start
-	
+
 		if fc mode_serial
 		then
 			echo "FC driver (no PWM) started"
 		fi
-	
+
 		# Start sensors
 		echo "[init] Start sensors"
 		sh /etc/init.d/rc.sensors
@@ -173,11 +145,11 @@ then
 		# Start one of the estimators
 		echo "[init] Start attitude_estimator_ekf"
 		attitude_estimator_ekf start
-	
+
 		# Start GPS
 		echo "[init] Start GPS >> need to implement"
 		#gps start
-	
+
 	fi
 
 # End of autostart

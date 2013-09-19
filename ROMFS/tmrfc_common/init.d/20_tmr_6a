@@ -1,0 +1,65 @@
+#!nsh
+
+echo "[init] TMRFC v1 on TMR-6A"
+
+#
+# Load default params for this platform
+#
+if param compare SYS_AUTOCONFIG 1
+then
+	# Set all params here, then disable autoconfig
+	param set SYS_AUTOCONFIG 0
+
+	param set MC_ATTRATE_D	         0.1
+	param set MC_ATTRATE_I	         0
+	param set MC_ATTRATE_P	         0.04
+	param set MC_ATT_D	             0.4
+	param set MC_ATT_I	             2
+	param set MC_ATT_P	             5
+	param set MC_YAWPOS_D	         0
+	param set MC_YAWPOS_I	         0.05
+	param set MC_YAWPOS_P	         2
+	param set MC_YAWRATE_D	         0
+	param set MC_YAWRATE_I	         0
+	param set MC_YAWRATE_P	         0.2
+
+	param save
+fi
+ 
+#
+# Force some key parameters to sane values
+# MAV_TYPE     13 = hexarotor
+#
+param set MAV_TYPE 13
+
+set EXIT_ON_END no
+
+#
+# Start and configure FC interface
+#
+echo "Start MAVLink (on USART6 / ttyS2)"
+mavlink start -d /dev/ttyS2
+usleep 5000
+echo "Start and configure FC interface"
+fc mode_pwm
+set EXIT_ON_END yes
+
+#
+# Load mixer
+#
+mixer load /dev/pwm_output /etc/mixers/FC_hex_x.mix
+
+#
+# Set PWM output frequency
+#
+pwm -u 400 -m 0xfff
+
+#
+# Start common for all multirotors apps
+#
+sh /etc/init.d/rc.multirotor
+
+if [ $EXIT_ON_END == yes ]
+then
+	exit
+fi
