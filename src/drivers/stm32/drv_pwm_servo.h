@@ -43,13 +43,8 @@
 
 /* configuration limits */
 #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
-# if defined(GPIO_TIM2_CH1OUT)
-# define PWM_SERVO_MAX_TIMERS   5
-# define PWM_SERVO_MAX_CHANNELS 13
-# else
 # define PWM_SERVO_MAX_TIMERS   4
 # define PWM_SERVO_MAX_CHANNELS 12
-# endif
 #else
 # define PWM_SERVO_MAX_TIMERS   4
 # define PWM_SERVO_MAX_CHANNELS 8
