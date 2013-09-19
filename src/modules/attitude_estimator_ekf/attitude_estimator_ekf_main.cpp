@@ -426,7 +426,9 @@ const unsigned int loop_interval_alarm = 6500;	// loop interval in microseconds
 					}
 
 					if (last_data > 0 && raw.timestamp - last_data > 12000)
+						#if !defined(CONFIG_ARCH_BOARD_TMRFC_V1)
 						printf("[attitude estimator ekf] sensor data missed! (%llu)\n", raw.timestamp - last_data);
+						#endif
 
 					last_data = raw.timestamp;
 
