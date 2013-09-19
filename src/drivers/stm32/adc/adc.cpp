@@ -340,6 +340,12 @@ test(void)
     if (fd < 0)
         err(1, "can't open ADC device");
 
+    #ifdef CONFIG_ARCH_BOARD_TMRFC_V1
+	/* wake up the temperature sensor from power down mode, and switch to the battery voltage */
+    modifyreg32(STM32_ADC_CCR, 0, (ADC_CCR_VBATE | ADC_CCR_TSVREFE));
+	usleep(500000);
+	#endif
+
     for (unsigned i = 0; i < 50; i++) {
         adc_msg_s data[10];
         ssize_t count = read(fd, data, sizeof(data));
@@ -350,7 +356,8 @@ test(void)
         unsigned channels = count / sizeof(data[0]);
 
         for (unsigned j = 0; j < channels; j++) {
-            printf ("%d: %u  ", data[j].am_channel, data[j].am_data);
+			/* 0.8056640625 mV = 3300 mV / 4096 */
+            printf ("ch%02d: %4u (%4.1f mV)  ", data[j].am_channel, data[j].am_data, (float)data[j].am_data * 0.8056640625);
         }
 
         printf("\n");
@@ -377,7 +384,7 @@ adc_main(int argc, char *argv[])
 #endif
 
 #ifdef CONFIG_ARCH_BOARD_TMRFC_V1
-        g_adc = new ADC(1 << 10);
+        g_adc = new ADC((1 << 10) | (1 << 15) | (1 << 16) | (1 << 17) | (1 << 18));
 #endif
 
         if (g_adc == nullptr)
