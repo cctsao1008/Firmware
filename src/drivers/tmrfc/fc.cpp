@@ -58,9 +58,7 @@
 #include <drivers/drv_pwm_output.h>
 #include <drivers/drv_gpio.h>
 #include <drivers/drv_hrt.h>
-
-# include <board_config.h>
-
+#include <board_config.h>
 #include <systemlib/systemlib.h>
 #include <systemlib/err.h>
 #include <systemlib/mixer/mixer.h>
@@ -73,31 +71,22 @@
 #include <uORB/topics/actuator_armed.h>
 
 #include <systemlib/err.h>
+
 #ifdef HRT_PPM_CHANNEL
-# include <systemlib/ppm_decode.h>
+#include <systemlib/ppm_decode.h> 
 #endif
 
 class TMRFC : public device::CDev
 {
 public:
     enum Mode {
-        MODE_NONE = 0,
-        MODE_1PWM,
+        MODE_NONE,
         MODE_2PWM,
-        MODE_3PWM,
         MODE_4PWM,
-        MODE_5PWM,
         MODE_6PWM,
-        MODE_7PWM,
         MODE_8PWM,
-        MODE_9PWM,
         MODE_10PWM,
-        MODE_11PWM,
         MODE_12PWM,
-        MODE_13PWM,
-        #if !defined(GPIO_TIM2_CH1OUT)
-        MODE_NPWM = MODE_13PWM
-        #endif
     };
     TMRFC();
     virtual ~TMRFC();
@@ -317,7 +306,6 @@ TMRFC::set_mode(Mode mode)
         set_pwm_rate(_pwm_alt_rate_channels, _pwm_default_rate, _pwm_alt_rate);
 
         break;
-    case MODE_5PWM:
     case MODE_6PWM:
         debug("MODE_6PWM");
         
@@ -331,14 +319,8 @@ TMRFC::set_mode(Mode mode)
         set_pwm_rate(_pwm_alt_rate_channels, _pwm_default_rate, _pwm_alt_rate);
 
         break;
-    case MODE_7PWM:
     case MODE_8PWM:
-    case MODE_9PWM:
-    case MODE_10PWM:
-    case MODE_11PWM:
-    case MODE_12PWM:
-    case MODE_13PWM:
-        debug("MODE_%dPWM", mode);
+         debug("MODE_8PWM");
         
         /* default output rates */
         _pwm_default_rate = 50;
@@ -346,7 +328,33 @@ TMRFC::set_mode(Mode mode)
         _pwm_alt_rate_channels = 0;
 
         /* XXX magic numbers */
-        up_pwm_servo_init(0xffff);
+        up_pwm_servo_init(0xfff);
+        set_pwm_rate(_pwm_alt_rate_channels, _pwm_default_rate, _pwm_alt_rate);
+
+        break;
+    case MODE_10PWM:
+        debug("MODE_10PWM");
+        
+        /* default output rates */
+        _pwm_default_rate = 50;
+        _pwm_alt_rate = 50;
+        _pwm_alt_rate_channels = 0;
+
+        /* XXX magic numbers */
+        up_pwm_servo_init(0xfff);
+        set_pwm_rate(_pwm_alt_rate_channels, _pwm_default_rate, _pwm_alt_rate);
+
+        break;
+    case MODE_12PWM:
+        debug("MODE_12PWM");
+        
+        /* default output rates */
+        _pwm_default_rate = 50;
+        _pwm_alt_rate = 50;
+        _pwm_alt_rate_channels = 0;
+
+        /* XXX magic numbers */
+        up_pwm_servo_init(0xfff);
         set_pwm_rate(_pwm_alt_rate_channels, _pwm_default_rate, _pwm_alt_rate);
 
         break;
@@ -537,6 +545,15 @@ TMRFC::task_main()
                 case MODE_6PWM:
                     num_outputs = 6;
                     break;
+                case MODE_8PWM:
+                    num_outputs = 8;
+                    break;
+                case MODE_10PWM:
+                    num_outputs = 10;
+                    break;
+                case MODE_12PWM:
+                    num_outputs = 12;
+                    break;
                 default:
                     num_outputs = 0;
                     break;
@@ -661,24 +678,17 @@ TMRFC::ioctl(file *filp, int cmd, unsigned long arg)
 
     /* if we are in valid PWM mode, try it as a PWM ioctl as well */
     switch (_mode) {
-    case MODE_1PWM:
     case MODE_2PWM:
-    case MODE_3PWM:
     case MODE_4PWM:
-    case MODE_5PWM:
     case MODE_6PWM:
-    case MODE_7PWM:
     case MODE_8PWM:
-    case MODE_9PWM:
     case MODE_10PWM:
-    case MODE_11PWM:
     case MODE_12PWM:
-    case MODE_13PWM:
         ret = pwm_ioctl(filp, cmd, arg);
         break;
 
     default:
-        debug("not in a PWM mode");
+        debug("not in a PWM mode(0x%X)", _mode);
         break;
     }
 
@@ -718,7 +728,6 @@ TMRFC::pwm_ioctl(file *filp, int cmd, unsigned long arg)
         ret = set_pwm_rate(arg, _pwm_default_rate, _pwm_alt_rate);
         break;
 
-    case PWM_SERVO_SET(12):
     case PWM_SERVO_SET(11):
     case PWM_SERVO_SET(10):
     case PWM_SERVO_SET(9):
@@ -739,7 +748,6 @@ TMRFC::pwm_ioctl(file *filp, int cmd, unsigned long arg)
 
         break;
 
-    case PWM_SERVO_GET(12):
     case PWM_SERVO_GET(11):
     case PWM_SERVO_GET(10):
     case PWM_SERVO_GET(9):
@@ -760,13 +768,41 @@ TMRFC::pwm_ioctl(file *filp, int cmd, unsigned long arg)
     case PWM_SERVO_GET_RATEGROUP(2):
     case PWM_SERVO_GET_RATEGROUP(3):
     case PWM_SERVO_GET_RATEGROUP(4):
+    case PWM_SERVO_GET_RATEGROUP(5):
         *(uint32_t *)arg = up_pwm_servo_get_rate_group(cmd - PWM_SERVO_GET_RATEGROUP(0));
         break;
 
     case PWM_SERVO_GET_COUNT:   
     case MIXERIOCGETOUTPUTCOUNT:
-        if ((_mode > MODE_NONE) && (_mode < MODE_NPWM))
-            *(unsigned *)arg = _mode;
+        switch (_mode) {
+        case MODE_12PWM:
+            *(unsigned *)arg = 12;
+            debug("MODE_12PWM %d\n", *(unsigned *)arg);
+            break;
+        case MODE_10PWM:
+            *(unsigned *)arg = 10;
+            debug("MODE_10PWM %d\n", *(unsigned *)arg);
+            break;
+        case MODE_8PWM:
+            *(unsigned *)arg = 8;
+            debug("MODE_8PWM %d\n", *(unsigned *)arg);
+            break;
+        case MODE_6PWM:
+            *(unsigned *)arg = 6;
+            debug("MODE_6PWM %d\n", *(unsigned *)arg);
+            break;
+        case MODE_4PWM:
+            *(unsigned *)arg = 4;
+            debug("MODE_4PWM %d\n", *(unsigned *)arg);
+            break;
+        case MODE_2PWM:
+            *(unsigned *)arg = 2;
+            debug("MODE_2PWM %d\n", *(unsigned *)arg);
+            break;
+        default:
+            ret = -EINVAL;
+            break;
+        }
 
         break;
 
@@ -841,11 +877,11 @@ ssize_t
 TMRFC::write(file *filp, const char *buffer, size_t len)
 {
     unsigned count = len / 2;
-    uint16_t values[13];
+    uint16_t values[12];
 
-    if (count > 13) {
-        // we only have 8 PWM outputs on the FC
-        count = 13;
+    if (count > 12) {
+        // we only have 12 PWM outputs on the FC
+        count = 12;
     }
 
     // allow for misaligned values
@@ -929,11 +965,13 @@ TMRFC::gpio_set_function(uint32_t gpios, int function)
 void
 TMRFC::gpio_write(uint32_t gpios, int function)
 {
+    #if 0
     int value = (function == GPIO_SET) ? 1 : 0;
 
     for (unsigned i = 0; i < _ngpio; i++)
         if (gpios & (1 << i))
             stm32_gpiowrite(_gpio_tab[i].output, value);
+    #endif
 }
 
 uint32_t
@@ -941,9 +979,11 @@ TMRFC::gpio_read(void)
 {
     uint32_t bits = 0;
 
+    #if 0
     for (unsigned i = 0; i < _ngpio; i++)
         if (stm32_gpioread(_gpio_tab[i].input))
             bits |= (1 << i);
+    #endif
 
     return bits;
 }
@@ -1032,12 +1072,7 @@ fc_new_mode(PortMode new_mode)
         break;
 
     case PORT_FULL_PWM:
-        /* select 13-pin PWM mode */
-        #if defined(GPIO_TIM2_CH1OUT)
-        servo_mode = TMRFC::MODE_13PWM;
-        #else
         servo_mode = TMRFC::MODE_12PWM;
-        #endif
         break;
 
     case PORT_GPIO_AND_SERIAL:
@@ -1102,20 +1137,23 @@ void
 test(void)
 {
     int fd;
-        unsigned servo_count = 0;
+    unsigned servo_count = 0;
     unsigned pwm_value = 1000;
     int  direction = 1;
+
+    warnx("test\n");
         
-    fd = open(PWM_OUTPUT_DEVICE_PATH, 0);
+    fd = open(TMRFC_DEVICE_PATH, O_RDWR);
 
     if (fd < 0)
         errx(1, "open fail");
 
-    if (ioctl(fd, PWM_SERVO_ARM, 0) < 0)       err(1, "servo arm failed");
+    if (ioctl(fd, PWM_SERVO_ARM, 0) < 0)
+        err(1, "servo arm failed");
 
-        if (ioctl(fd, PWM_SERVO_GET_COUNT, (unsigned long)&servo_count) != 0) {
-            err(1, "Unable to get servo count\n");        
-        }
+    if (ioctl(fd, PWM_SERVO_GET_COUNT, (unsigned long)&servo_count) != 0) {
+        err(1, "Unable to get servo count\n");        
+    }
 
     warnx("Testing %u servos", (unsigned)servo_count);
 
