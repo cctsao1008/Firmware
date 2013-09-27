@@ -204,6 +204,7 @@ public:
 	 */
 	int			disable_rc_handling();
 
+#ifdef CONFIG_ARCH_BOARD_PX4FMU_V1
 	/**
 	 * Set the DSM VCC is controlled by relay one flag
 	 *
@@ -223,6 +224,9 @@ public:
 	{
 		return _dsm_vcc_ctl;
 	};
+#endif
+
+	inline uint16_t		system_status() const {return _status;}
 
 private:
 	device::Device		*_interface;
@@ -274,8 +278,9 @@ private:
 	float			_battery_mamphour_total;///<amp hours consumed so far
 	uint64_t		_battery_last_timestamp;///<last amp hour calculation timestamp
 
+#ifdef CONFIG_ARCH_BOARD_PX4FMU_V1
 	bool			_dsm_vcc_ctl;		///<true if relay 1 controls DSM satellite RX power
-
+#endif
 
 	/**
 	 * Trampoline to the worker task
@@ -461,8 +466,11 @@ PX4IO::PX4IO(device::Device *interface) :
 	_battery_amp_per_volt(90.0f/5.0f), // this matches the 3DR current sensor
 	_battery_amp_bias(0),
 	_battery_mamphour_total(0),
-	_battery_last_timestamp(0),
-	_dsm_vcc_ctl(false)
+	_battery_last_timestamp(0)
+#ifdef CONFIG_ARCH_BOARD_PX4FMU_V1
+	,_dsm_vcc_ctl(false)
+#endif
+
 {
 	/* we need this potentially before it could be set in task_main */
 	g_dev = this;
@@ -582,6 +590,9 @@ PX4IO::init()
 	 */
 	if ((reg & PX4IO_P_SETUP_ARMING_INAIR_RESTART_OK) &&
 	    (reg & PX4IO_P_SETUP_ARMING_FMU_ARMED)) {
+
+		/* get a status update from IO */
+		io_get_status();
 
 	    	mavlink_log_emergency(_mavlink_fd, "[IO] RECOVERING FROM FMU IN-AIR RESTART");
 	    	log("INAIR RESTART RECOVERY (needs commander app running)");
@@ -855,7 +866,7 @@ PX4IO::task_main()
 
 				// See if bind parameter has been set, and reset it to -1
 				param_get(dsm_bind_param = param_find("RC_DSM_BIND"), &dsm_bind_val);
-				if (dsm_bind_val >= 0) {
+				if (dsm_bind_val > -1) {
 					dsm_bind_ioctl(dsm_bind_val);
 					dsm_bind_val = -1;
 					param_set(dsm_bind_param, &dsm_bind_val);
@@ -1169,7 +1180,7 @@ PX4IO::dsm_bind_ioctl(int dsmMode)
 {
 	if (!(_status & PX4IO_P_STATUS_FLAGS_SAFETY_OFF)) {
 		/* 0: dsm2, 1:dsmx */
-		if ((dsmMode >= 0) && (dsmMode <= 1)) {
+		if ((dsmMode == 0) || (dsmMode == 1)) {
 			mavlink_log_info(_thread_mavlink_fd, "[IO] binding dsm%c rx", (dsmMode == 0) ? '2' : 'x');
 			ioctl(nullptr, DSM_BIND_START, (dsmMode == 0) ? DSM2_BIND_PULSES : DSMX_BIND_PULSES);
 		} else {
@@ -1501,7 +1512,7 @@ PX4IO::mixer_send(const char *buf, unsigned buflen, unsigned retries)
 			 * even.
 			 */
 			unsigned total_len = sizeof(px4io_mixdata) + count;
-			if (total_len % 1) {
+			if (total_len % 2) {
 				msg->text[count] = '\0';
 				total_len++;
 			}
@@ -1638,11 +1649,19 @@ PX4IO::print_status()
 		((arming & PX4IO_P_SETUP_ARMING_FAILSAFE_CUSTOM)   ? " FAILSAFE_CUSTOM" : ""),
 		((arming & PX4IO_P_SETUP_ARMING_INAIR_RESTART_OK)   ? " INAIR_RESTART_OK" : ""),
 		((arming & PX4IO_P_SETUP_ARMING_ALWAYS_PWM_ENABLE)  ? " ALWAYS_PWM_ENABLE" : ""));
+#ifdef CONFIG_ARCH_BOARD_PX4FMU_V1
 	printf("rates 0x%04x default %u alt %u relays 0x%04x\n",
 		io_reg_get(PX4IO_PAGE_SETUP, PX4IO_P_SETUP_PWM_RATES),
 		io_reg_get(PX4IO_PAGE_SETUP, PX4IO_P_SETUP_PWM_DEFAULTRATE),
 		io_reg_get(PX4IO_PAGE_SETUP, PX4IO_P_SETUP_PWM_ALTRATE),
 		io_reg_get(PX4IO_PAGE_SETUP, PX4IO_P_SETUP_RELAYS));
+#endif
+#ifdef CONFIG_ARCH_BOARD_PX4FMU_V2
+	printf("rates 0x%04x default %u alt %u\n",
+		io_reg_get(PX4IO_PAGE_SETUP, PX4IO_P_SETUP_PWM_RATES),
+		io_reg_get(PX4IO_PAGE_SETUP, PX4IO_P_SETUP_PWM_DEFAULTRATE),
+		io_reg_get(PX4IO_PAGE_SETUP, PX4IO_P_SETUP_PWM_ALTRATE));
+#endif
 	printf("debuglevel %u\n", io_reg_get(PX4IO_PAGE_SETUP, PX4IO_P_SETUP_SET_DEBUG));
 	printf("controls");
 	for (unsigned i = 0; i < _max_controls; i++)
@@ -1783,36 +1802,58 @@ PX4IO::ioctl(file * /*filep*/, int cmd, unsigned long arg)
 	}
 
 	case GPIO_RESET: {
+#ifdef CONFIG_ARCH_BOARD_PX4FMU_V1
 		uint32_t bits = (1 << _max_relays) - 1;
 		/* don't touch relay1 if it's controlling RX vcc */
 		if (_dsm_vcc_ctl)
 			bits &= ~PX4IO_P_SETUP_RELAYS_POWER1;
 		ret = io_reg_modify(PX4IO_PAGE_SETUP, PX4IO_P_SETUP_RELAYS, bits, 0);
+#endif
+#ifdef CONFIG_ARCH_BOARD_PX4FMU_V2
+		ret = -EINVAL;
+#endif
 		break;
 	}
 
 	case GPIO_SET:
+#ifdef CONFIG_ARCH_BOARD_PX4FMU_V1
 		arg &= ((1 << _max_relays) - 1);
 		/* don't touch relay1 if it's controlling RX vcc */
-		if (_dsm_vcc_ctl & (arg & PX4IO_P_SETUP_RELAYS_POWER1))
+		if (_dsm_vcc_ctl & (arg & PX4IO_P_SETUP_RELAYS_POWER1)) {
 			ret = -EINVAL;
-		else
-			ret = io_reg_modify(PX4IO_PAGE_SETUP, PX4IO_P_SETUP_RELAYS, 0, arg);
+			break;
+		}
+		ret = io_reg_modify(PX4IO_PAGE_SETUP, PX4IO_P_SETUP_RELAYS, 0, arg);
+#endif
+#ifdef CONFIG_ARCH_BOARD_PX4FMU_V2
+		ret = -EINVAL;
+#endif
 		break;
 
 	case GPIO_CLEAR:
+#ifdef CONFIG_ARCH_BOARD_PX4FMU_V1
 		arg &= ((1 << _max_relays) - 1);
 		/* don't touch relay1 if it's controlling RX vcc */
-		if (_dsm_vcc_ctl & (arg & PX4IO_P_SETUP_RELAYS_POWER1))
+		if (_dsm_vcc_ctl & (arg & PX4IO_P_SETUP_RELAYS_POWER1)) {
 			ret = -EINVAL;
-		else
+			break;
+		}
 			ret = io_reg_modify(PX4IO_PAGE_SETUP, PX4IO_P_SETUP_RELAYS, arg, 0);
+#endif
+#ifdef CONFIG_ARCH_BOARD_PX4FMU_V2
+		ret = -EINVAL;
+#endif
 		break;
 
 	case GPIO_GET:
+#ifdef CONFIG_ARCH_BOARD_PX4FMU_V1
 		*(uint32_t *)arg = io_reg_get(PX4IO_PAGE_SETUP, PX4IO_P_SETUP_RELAYS);
 		if (*(uint32_t *)arg == _io_reg_get_error)
 			ret = -EIO;
+#endif
+#ifdef CONFIG_ARCH_BOARD_PX4FMU_V2
+		ret = -EINVAL;
+#endif
 		break;
 
 	case MIXERIOCGETOUTPUTCOUNT:
@@ -1990,6 +2031,7 @@ start(int argc, char *argv[])
 		}
 	}
 
+#ifdef CONFIG_ARCH_BOARD_PX4FMU_V1
 	int dsm_vcc_ctl;
 
 	if (param_get(param_find("RC_RL1_DSM_VCC"), &dsm_vcc_ctl) == OK) {
@@ -1998,6 +2040,7 @@ start(int argc, char *argv[])
 			g_dev->ioctl(nullptr, DSM_BIND_POWER_UP, 0);
 		}
 	}
+#endif
 	exit(0);
 }
 
@@ -2037,8 +2080,10 @@ bind(int argc, char *argv[])
 	if (g_dev == nullptr)
 		errx(1, "px4io must be started first");
 
+#ifdef CONFIG_ARCH_BOARD_PX4FMU_V1
 	if (!g_dev->get_dsm_vcc_ctl())
 		errx(1, "DSM bind feature not enabled");
+#endif
 
 	if (argc < 3)
 		errx(0, "needs argument, use dsm2 or dsmx");
@@ -2049,9 +2094,12 @@ bind(int argc, char *argv[])
 		pulses = DSMX_BIND_PULSES;
 	else 
 		errx(1, "unknown parameter %s, use dsm2 or dsmx", argv[2]);
+	if (g_dev->system_status() & PX4IO_P_STATUS_FLAGS_SAFETY_OFF) 
+		errx(1, "system must not be armed");
 
+#ifdef CONFIG_ARCH_BOARD_PX4FMU_V1
 	warnx("This command will only bind DSM if satellite VCC (red wire) is controlled by relay 1.");
-
+#endif
 	g_dev->ioctl(nullptr, DSM_BIND_START, pulses);
 
 	exit(0);
@@ -2083,10 +2131,9 @@ test(void)
 	if (ioctl(fd, PWM_SERVO_ARM, 0))
 		err(1, "failed to arm servos");
 
-	/* Open console directly to grab CTRL-C signal */
-	int console = open("/dev/console", O_NONBLOCK | O_RDONLY | O_NOCTTY);
-	if (!console)
-		err(1, "failed opening console");
+	struct pollfd fds;
+	fds.fd = 0; /* stdin */
+	fds.events = POLLIN;
 
 	warnx("Press CTRL-C or 'c' to abort.");
 
@@ -2127,10 +2174,12 @@ test(void)
 
 		/* Check if user wants to quit */
 		char c;
-		if (read(console, &c, 1) == 1) {
+		ret = poll(&fds, 1, 0);
+		if (ret > 0) {
+
+			read(0, &c, 1);
 			if (c == 0x03 || c == 0x63 || c == 'q') {
 				warnx("User abort\n");
-				close(console);
 				exit(0);
 			}
 		}
@@ -2200,7 +2249,7 @@ px4io_main(int argc, char *argv[])
 		}
 
 		PX4IO_Uploader *up;
-		const char *fn[5];
+		const char *fn[3];
 
 		/* work out what we're uploading... */
 		if (argc > 2) {
@@ -2208,11 +2257,19 @@ px4io_main(int argc, char *argv[])
 			fn[1] = nullptr;
 
 		} else {
-			fn[0] = "/etc/extras/px4io-v2_default.bin";
-			fn[1] = "/etc/extras/px4io-v1_default.bin";
+#if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
+			fn[0] = "/etc/extras/px4io-v1_default.bin";
+			fn[1] =	"/fs/microsd/px4io1.bin";
 			fn[2] =	"/fs/microsd/px4io.bin";
-			fn[3] =	"/fs/microsd/px4io2.bin";
-			fn[4] =	nullptr;
+			fn[3] =	nullptr;
+#elif defined(CONFIG_ARCH_BOARD_PX4FMU_V2)
+			fn[0] = "/etc/extras/px4io-v2_default.bin";
+			fn[1] =	"/fs/microsd/px4io2.bin";
+			fn[2] =	"/fs/microsd/px4io.bin";
+			fn[3] =	nullptr;
+#else
+#error "unknown board"
+#endif
 		}
 
 		up = new PX4IO_Uploader;
