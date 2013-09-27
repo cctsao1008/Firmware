@@ -11,7 +11,7 @@ sh /etc/init.d/rc.sensors
 #
 # Start logging (depends on sensors)
 #
-sh /etc/init.d/rc.logging
+#sh /etc/init.d/rc.logging
 
 #
 # Start the commander.
@@ -42,3 +42,10 @@ multirotor_att_control start
 # Start position control
 #
 multirotor_pos_control start
+
+#
+# Re-start NSH terminal on USART1
+#
+sleep 2
+nshterm /dev/ttyS0 &
+
