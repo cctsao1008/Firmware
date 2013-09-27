@@ -46,7 +46,7 @@
 
 #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
 /* USART1 For GPS on TMR-FC v1.0 */
-#define GPS_DEFAULT_UART_PORT "/dev/ttyS0"
+#define GPS_DEFAULT_UART_PORT "/dev/ttyS2"
 #else
 #define GPS_DEFAULT_UART_PORT "/dev/ttyS3"
 #endif
