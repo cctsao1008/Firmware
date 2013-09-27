@@ -1171,7 +1171,7 @@ MPU6050::measure()
 
     /* count measurement */
     _reads++;
-
+#if 0
     /*
      * Convert from big to little endian
      */
@@ -1186,6 +1186,43 @@ MPU6050::measure()
     report.gyro_y = int16_t_from_bytes(mpu_report.gyro_x);
     //report.gyro_z = (-1) * (int16_t_from_bytes(mpu_report.gyro_z));
     report.gyro_z = ~(int16_t_from_bytes(mpu_report.gyro_z)) + 1;
+#else
+    /*
+     * Convert from big to little endian
+     */
+    report.accel_x = int16_t_from_bytes(mpu_report.accel_x);
+    report.accel_y = int16_t_from_bytes(mpu_report.accel_y);
+    report.accel_z = int16_t_from_bytes(mpu_report.accel_z);
+
+    report.temp = int16_t_from_bytes(mpu_report.temp);
+
+    report.gyro_x = int16_t_from_bytes(mpu_report.gyro_x);
+    report.gyro_y = int16_t_from_bytes(mpu_report.gyro_y);
+    report.gyro_z = int16_t_from_bytes(mpu_report.gyro_z);
+
+    /*
+     * Swap x,y axe and negate x,z
+     */
+    int16_t accel_xt = report.accel_y;
+    int16_t accel_yt = report.accel_x;
+    int16_t accel_zt = ((report.accel_z == -32768) ? 32767 : -report.accel_z);
+
+    int16_t gyro_xt = report.gyro_y;
+    int16_t gyro_yt = report.gyro_x;
+    int16_t gyro_zt = ((report.gyro_z == -32768) ? 32767 : -report.gyro_z);
+
+    /*
+     * Apply the swap
+     */
+    report.accel_x = accel_xt;
+    report.accel_y = accel_yt;
+    report.accel_z = accel_zt;
+
+    report.gyro_x = gyro_xt;
+    report.gyro_y = gyro_yt;
+    report.gyro_z = gyro_zt;
+	
+#endif
 
 #if 0
     /*
