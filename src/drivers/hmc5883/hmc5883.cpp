@@ -857,16 +857,16 @@ HMC5883::collect()
 
     #if defined(CONFIG_ARCH_BOARD_TMRFC_V1) /* TMRFC V1.x */
 	#if 1
-	_reports[_next_report].x_raw = report.x;
-	_reports[_next_report].y_raw = report.y;
-	_reports[_next_report].z_raw = report.z;
-    //_reports[_next_report].x_raw = report.y;
-    //_reports[_next_report].y_raw = ((report.x == -32768) ? 32767 : -report.x);
-    //_reports[_next_report].z_raw = ((report.z == -32768) ? 32767 : -report.z);
+	new_report.x_raw = report.x;
+	new_report.y_raw = report.y;
+	new_report.z_raw = report.z;
+    //new_report.x_raw = report.y;
+    //new_report.y_raw = ((report.x == -32768) ? 32767 : -report.x);
+    //new_report.z_raw = ((report.z == -32768) ? 32767 : -report.z);
 	#else
-    _reports[_next_report].x_raw = report.y;
-	_reports[_next_report].y_raw = report.x;
-	_reports[_next_report].z_raw = ((report.z == -2048) ? 2047 : -report.z);
+    new_report.x_raw = report.y;
+	new_report.y_raw = report.x;
+	new_report.z_raw = ((report.z == -2048) ? 2047 : -report.z);
 	#endif
     #else
     /*
@@ -900,16 +900,16 @@ HMC5883::collect()
 
 #if defined(CONFIG_ARCH_BOARD_TMRFC_V1) /* TMRFC V1.x */
         #if 1
-        _reports[_next_report].x = ((report.x * _range_scale) - _scale.x_offset) * _scale.x_scale;
-        _reports[_next_report].y = ((report.y * _range_scale) - _scale.y_offset) * _scale.y_scale;
-		_reports[_next_report].z = ((report.z * _range_scale) - _scale.z_offset) * _scale.z_scale;
-        //_reports[_next_report].x = ((report.y * _range_scale) - _scale.x_offset) * _scale.x_scale;
-        //_reports[_next_report].y = ((((report.x == -32768) ? 32767 : -report.x) * _range_scale) - _scale.y_offset) * _scale.y_scale;
-        //_reports[_next_report].z = ((((report.z == -32768) ? 32767 : -report.z) * _range_scale) - _scale.z_offset) * _scale.z_scale;
+        new_report.x = ((report.x * _range_scale) - _scale.x_offset) * _scale.x_scale;
+        new_report.y = ((report.y * _range_scale) - _scale.y_offset) * _scale.y_scale;
+		new_report.z = ((report.z * _range_scale) - _scale.z_offset) * _scale.z_scale;
+        //new_report.x = ((report.y * _range_scale) - _scale.x_offset) * _scale.x_scale;
+        //new_report.y = ((((report.x == -32768) ? 32767 : -report.x) * _range_scale) - _scale.y_offset) * _scale.y_scale;
+        //new_report.z = ((((report.z == -32768) ? 32767 : -report.z) * _range_scale) - _scale.z_offset) * _scale.z_scale;
 		#else
-        _reports[_next_report].x = ((report.y * _range_scale) - _scale.x_offset) * _scale.x_scale;
-        _reports[_next_report].y = ((report.x * _range_scale) - _scale.y_offset) * _scale.y_scale;
-		_reports[_next_report].z = ((((report.z == -2048) ? 2047 : -report.z) * _range_scale) - _scale.z_offset) * _scale.z_scale;
+        new_report.x = ((report.y * _range_scale) - _scale.x_offset) * _scale.x_scale;
+        new_report.y = ((report.x * _range_scale) - _scale.y_offset) * _scale.y_scale;
+		new_report.z = ((((report.z == -2048) ? 2047 : -report.z) * _range_scale) - _scale.z_offset) * _scale.z_scale;
 		#endif
 #else /* PX4FMU V1.x */
 
