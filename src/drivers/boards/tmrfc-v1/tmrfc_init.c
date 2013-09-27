@@ -168,10 +168,9 @@ __EXPORT int nsh_archinitialize(void)
 {
     int result;
 
-    /* configure always-on ADC pins */
-    //stm32_configgpio(GPIO_ADC1_IN10); // LiPo Battery
-    stm32_configgpio(GPIO_ADC1_IN15); // Power Meter
-    /* IN12 and IN13 further below */
+    /* configure always-on ADC pins for LiPo Battery voltage detect and Power Meter use */
+    stm32_configgpio(GPIO_ADC1_IN10);
+    stm32_configgpio(GPIO_ADC1_IN15);
 
     message("[boot] Initializing HRT Callout Interface\n");
     usleep(200000);

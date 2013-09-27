@@ -75,7 +75,7 @@ int test_adc(int argc, char *argv[])
 		unsigned channels = count / sizeof(data[0]);
 
 		for (unsigned j = 0; j < channels; j++) {
-			printf("%d: %u  ", data[j].am_channel, data[j].am_data);
+			printf ("ch%02d:%6.1f mV (%4u)   ", data[j].am_channel, (float)data[j].am_data * 0.8056640625, data[j].am_data);
 		}
 
 		printf("\n");
