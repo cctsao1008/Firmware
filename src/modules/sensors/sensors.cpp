@@ -125,7 +125,8 @@
 
 #ifdef CONFIG_ARCH_BOARD_TMRFC_V1
 #define ADC_BATTERY_VOLTAGE_CHANNEL   10
-#define ADC_AIRSPEED_VOLTAGE_CHANNEL  11
+#define ADC_BATTERY_CURRENT_CHANNEL   15
+//#define ADC_AIRSPEED_VOLTAGE_CHANNEL  11
 #endif
 
 #define BAT_VOL_INITIAL 0.f
@@ -1289,7 +1290,9 @@ Sensors::adc_poll(struct sensor_combined_s &raw)
                         }
                     } 
 
-                } else if (ADC_AIRSPEED_VOLTAGE_CHANNEL == buf_adc[i].am_channel) {
+                } 
+				#if !defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+				else if (ADC_AIRSPEED_VOLTAGE_CHANNEL == buf_adc[i].am_channel) {
 
                     /* calculate airspeed, raw is the difference from */
                     float voltage = (float)(buf_adc[i].am_data ) * 3.3f / 4096.0f * 2.0f; //V_ref/4096 * (voltage divider factor)
@@ -1316,6 +1319,7 @@ Sensors::adc_poll(struct sensor_combined_s &raw)
                         }
                     }
                 }
+				#endif
 
                 _last_adc = hrt_absolute_time();
             }
