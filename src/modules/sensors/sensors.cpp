@@ -847,7 +847,7 @@ Sensors::accel_init()
 
         // XXX do the check more elegantly
 
-        #if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
+        #if defined(CONFIG_ARCH_BOARD_PX4FMU_V1) || defined(CONFIG_ARCH_BOARD_TMRFC_V1)
 
         /* set the accel internal sampling rate up to at leat 1000Hz */
         ioctl(fd, ACCELIOCSSAMPLERATE, 1000);
@@ -862,13 +862,6 @@ Sensors::accel_init()
 
         /* set the driver to poll at 800Hz */
         ioctl(fd, SENSORIOCSPOLLRATE, 800);
-        #elif defined(CONFIG_ARCH_BOARD_TMRFC_V1)
-
-        /* set the accel internal sampling rate up to at leat 1000Hz */
-        ioctl(fd, ACCELIOCSSAMPLERATE, 1000);
-
-        /* set the driver to poll at 800Hz */
-        ioctl(fd, SENSORIOCSPOLLRATE, 1000);
 
         #else
             #error Need a board configuration, either CONFIG_ARCH_BOARD_PX4FMU_V1, CONFIG_ARCH_BOARD_PX4FMU_V2 or CONFIG_ARCH_BOARD_TMRFC_V1
@@ -934,16 +927,6 @@ Sensors::mag_init()
     }
 
     /* try different mag sampling rates */
-
-    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
-    ret = ioctl(fd, MAGIOCSSAMPLERATE, 150);
-    if (ret == OK) {
-        /* set the pollrate accordingly */
-        ioctl(fd, SENSORIOCSPOLLRATE, 150);
-    } else {
-            errx(1, "FATAL: mag sampling rate could not be set");
-    }
-    #else
     ret = ioctl(fd, MAGIOCSSAMPLERATE, 150);
     if (ret == OK) {
         /* set the pollrate accordingly */
@@ -958,9 +941,6 @@ Sensors::mag_init()
             errx(1, "FATAL: mag sampling rate could not be set");
         }
     }
-    #endif
-
-    
 
     ret = ioctl(fd, MAGIOCGEXTERNAL, 0);
     if (ret < 0)
