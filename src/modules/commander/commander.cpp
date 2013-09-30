@@ -1305,7 +1305,7 @@ check_valid(hrt_abstime timestamp, hrt_abstime timeout, bool valid_in, bool *val
 void
 control_status_leds(vehicle_status_s *status, actuator_armed_s *armed, bool changed)
 {
-#if defined(CONFIG_ARCH_BOARD_PX4FMU_V1) || defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+#if !defined(CONFIG_ARCH_BOARD_TMRFC_V1)
 	/* driving rgbled */
 	if (changed) {
 		bool set_normal_color = false;
@@ -1345,9 +1345,9 @@ control_status_leds(vehicle_status_s *status, actuator_armed_s *armed, bool chan
 			}
 		}
 	}
+#endif
 
 #if defined(CONFIG_ARCH_BOARD_PX4FMU_V1) || defined(CONFIG_ARCH_BOARD_TMRFC_V1)
-
 	/* this runs at around 20Hz, full cycle is 16 ticks = 10/16Hz */
 	if (armed->armed) {
 		/* armed, solid */
