@@ -397,7 +397,7 @@ MPU6050::MPU6050(int bus) :
     _gyro_range_rad_s(0.0f),
     _gyro_topic(-1),
     _reads(0),
-    _sample_rate(1000),
+    _sample_rate(1000),//MPU6050_GYRO_DEFAULT_RATE
     _sample_perf(perf_alloc(PC_ELAPSED, "mpu6050_read")),
     _accel_filter_x(MPU6050_ACCEL_DEFAULT_RATE, MPU6050_ACCEL_DEFAULT_DRIVER_FILTER_FREQ),
     _accel_filter_y(MPU6050_ACCEL_DEFAULT_RATE, MPU6050_ACCEL_DEFAULT_DRIVER_FILTER_FREQ),
