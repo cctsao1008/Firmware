@@ -251,9 +251,8 @@ void mavlink_wpm_send_waypoint_reached(uint16_t seq)
  *
  * The distance calculation is based on the WGS84 geoid (GPS)
  */
-float mavlink_wpm_distance_to_point_global_wgs84(uint16_t seq, float lat, float lon, float alt)
+float mavlink_wpm_distance_to_point_global_wgs84(uint16_t seq, float lat, float lon, float alt, float *dist_xy, float *dist_z)
 {
-	static uint16_t counter;
 
 	if (seq < wpm->size) {
 		mavlink_mission_item_t *wp = &(wpm->waypoints[seq]);
@@ -274,20 +273,21 @@ float mavlink_wpm_distance_to_point_global_wgs84(uint16_t seq, float lat, float 
 		float dxy = radius_earth * c;
 		float dz = alt - wp->z;
 
+		*dist_xy = fabsf(dxy);
+		*dist_z = fabsf(dz);
+
 		return sqrtf(dxy * dxy + dz * dz);
 
 	} else {
 		return -1.0f;
 	}
 
-	counter++;
-
 }
 
 /*
  * Calculate distance in local frame (NED)
  */
-float mavlink_wpm_distance_to_point_local(uint16_t seq, float x, float y, float z)
+float mavlink_wpm_distance_to_point_local(uint16_t seq, float x, float y, float z, float *dist_xy, float *dist_z)
 {
 	if (seq < wpm->size) {
 		mavlink_mission_item_t *cur = &(wpm->waypoints[seq]);
@@ -296,6 +296,9 @@ float mavlink_wpm_distance_to_point_local(uint16_t seq, float x, float y, float 
 		float dy = (cur->y - y);
 		float dz = (cur->z - z);
 
+		*dist_xy = sqrtf(dx * dx + dy * dy);
+		*dist_z = fabsf(dz);
+
 		return sqrtf(dx * dx + dy * dy + dz * dz);
 
 	} else {
@@ -303,11 +306,13 @@ float mavlink_wpm_distance_to_point_local(uint16_t seq, float x, float y, float 
 	}
 }
 
-void check_waypoints_reached(uint64_t now, const struct vehicle_global_position_s *global_pos, struct vehicle_local_position_s *local_pos)
+void check_waypoints_reached(uint64_t now, const struct vehicle_global_position_s *global_pos, struct vehicle_local_position_s *local_pos, float turn_distance)
 {
 	static uint16_t counter;
 
-	if (!global_pos->valid && !local_pos->xy_valid) {
+	if ((!global_pos->valid && !local_pos->xy_valid) ||
+		/* no waypoint */
+		wpm->size == 0) {
 		/* nothing to check here, return */
 		return;
 	}
@@ -330,26 +335,37 @@ void check_waypoints_reached(uint64_t now, const struct vehicle_global_position_
 			orbit = 15.0f;
 		}
 
+		/* keep vertical orbit */
+		float vertical_switch_distance = orbit;
+
+		/* Take the larger turn distance - orbit or turn_distance */
+		if (orbit < turn_distance)
+			orbit = turn_distance;
+
 		int coordinate_frame = wpm->waypoints[wpm->current_active_wp_id].frame;
 		float dist = -1.0f;
 
+		float dist_xy = -1.0f;
+		float dist_z = -1.0f;
+
 		if (coordinate_frame == (int)MAV_FRAME_GLOBAL) {
-			dist = mavlink_wpm_distance_to_point_global_wgs84(wpm->current_active_wp_id, (float)global_pos->lat * 1e-7f, (float)global_pos->lon * 1e-7f, global_pos->alt);
+			dist = mavlink_wpm_distance_to_point_global_wgs84(wpm->current_active_wp_id, (float)global_pos->lat * 1e-7f, (float)global_pos->lon * 1e-7f, global_pos->alt, &dist_xy, &dist_z);
 
 		} else if (coordinate_frame == (int)MAV_FRAME_GLOBAL_RELATIVE_ALT) {
-			dist = mavlink_wpm_distance_to_point_global_wgs84(wpm->current_active_wp_id, (float)global_pos->lat * 1e-7f, (float)global_pos->lon * 1e-7f, global_pos->relative_alt);
+			dist = mavlink_wpm_distance_to_point_global_wgs84(wpm->current_active_wp_id, (float)global_pos->lat * 1e-7f, (float)global_pos->lon * 1e-7f, global_pos->relative_alt, &dist_xy, &dist_z);
 
 		} else if (coordinate_frame == (int)MAV_FRAME_LOCAL_ENU || coordinate_frame == (int)MAV_FRAME_LOCAL_NED) {
-			dist = mavlink_wpm_distance_to_point_local(wpm->current_active_wp_id, local_pos->x, local_pos->y, local_pos->z);
+			dist = mavlink_wpm_distance_to_point_local(wpm->current_active_wp_id, local_pos->x, local_pos->y, local_pos->z, &dist_xy, &dist_z);
 
 		} else if (coordinate_frame == (int)MAV_FRAME_MISSION) {
 			/* Check if conditions of mission item are satisfied */
 			// XXX TODO
 		}
 
-		if (dist >= 0.f && dist <= orbit) {
+		if (dist >= 0.f && dist_xy <= orbit && dist_z >= 0.0f && dist_z <= vertical_switch_distance) {
 			wpm->pos_reached = true;
 		}
+
 		// check if required yaw reached
 		float yaw_sp = _wrap_pi(wpm->waypoints[wpm->current_active_wp_id].param4 / 180.0f * FM_PI);
 		float yaw_err = _wrap_pi(yaw_sp - local_pos->yaw);
@@ -382,7 +398,14 @@ void check_waypoints_reached(uint64_t now, const struct vehicle_global_position_
 
 			if (time_elapsed) {
 
+				/* safeguard against invalid missions with last wp autocontinue on */
+				if (wpm->current_active_wp_id == wpm->size - 1) {
+					/* stop handling missions here */
+					cur_wp->autocontinue = false;
+				}
+
 				if (cur_wp->autocontinue) {
+
 					cur_wp->current = 0;
 
 					float navigation_lat = -1.0f;
@@ -403,13 +426,16 @@ void check_waypoints_reached(uint64_t now, const struct vehicle_global_position_
 						navigation_frame = MAV_FRAME_LOCAL_NED;
 					}
 
+					/* guard against missions without final land waypoint */
 					/* only accept supported navigation waypoints, skip unknown ones */
 					do {
+
 						/* pick up the last valid navigation waypoint, this will be one we hold on to after the mission */
 						if (wpm->waypoints[wpm->current_active_wp_id].command == (int)MAV_CMD_NAV_WAYPOINT ||
 				wpm->waypoints[wpm->current_active_wp_id].command == (int)MAV_CMD_NAV_LOITER_TURNS ||
 				wpm->waypoints[wpm->current_active_wp_id].command == (int)MAV_CMD_NAV_LOITER_TIME ||
-				wpm->waypoints[wpm->current_active_wp_id].command == (int)MAV_CMD_NAV_LOITER_UNLIM) {
+				wpm->waypoints[wpm->current_active_wp_id].command == (int)MAV_CMD_NAV_LOITER_UNLIM ||
+				wpm->waypoints[wpm->current_active_wp_id].command == (int)MAV_CMD_NAV_TAKEOFF) {
 
 							/* this is a navigation waypoint */
 							navigation_frame = cur_wp->frame;
@@ -418,17 +444,20 @@ void check_waypoints_reached(uint64_t now, const struct vehicle_global_position_
 							navigation_alt = cur_wp->z;
 						}
 
-						if (wpm->current_active_wp_id == wpm->size - 1 && wpm->size > 1) {
-							/* the last waypoint was reached, if auto continue is
-							 * activated keep the system loitering there.
-							 */
-							cur_wp->command = MAV_CMD_NAV_LOITER_UNLIM;
-							cur_wp->param3 = 20.0f; // XXX magic number 20 m loiter radius
-							cur_wp->frame = navigation_frame;
-							cur_wp->x = navigation_lat;
-							cur_wp->y = navigation_lon;
-							cur_wp->z = navigation_alt;
-							cur_wp->autocontinue = false;
+						if (wpm->current_active_wp_id == wpm->size - 1) {
+
+							/* if we're not landing at the last nav waypoint, we're falling back to loiter */
+							if (wpm->waypoints[wpm->current_active_wp_id].command != (int)MAV_CMD_NAV_LAND) {
+								/* the last waypoint was reached, if auto continue is
+								 * activated AND it is NOT a land waypoint, keep the system loitering there.
+								 */
+								cur_wp->command = MAV_CMD_NAV_LOITER_UNLIM;
+								cur_wp->param3 = 20.0f; // XXX magic number 20 m loiter radius
+								cur_wp->frame = navigation_frame;
+								cur_wp->x = navigation_lat;
+								cur_wp->y = navigation_lon;
+								cur_wp->z = navigation_alt;
+							}
 
 							/* we risk an endless loop for missions without navigation waypoints, abort. */
 							break;
@@ -463,7 +492,7 @@ void check_waypoints_reached(uint64_t now, const struct vehicle_global_position_
 }
 
 
-int mavlink_waypoint_eventloop(uint64_t now, const struct vehicle_global_position_s *global_position, struct vehicle_local_position_s *local_position)
+int mavlink_waypoint_eventloop(uint64_t now, const struct vehicle_global_position_s *global_position, struct vehicle_local_position_s *local_position, struct navigation_capabilities_s *nav_cap)
 {
 	/* check for timed-out operations */
 	if (now - wpm->timestamp_lastaction > wpm->timeout && wpm->current_state != MAVLINK_WPM_STATE_IDLE) {
@@ -486,7 +515,7 @@ int mavlink_waypoint_eventloop(uint64_t now, const struct vehicle_global_positio
 		}
 	}
 
-	check_waypoints_reached(now, global_position, local_position);
+	check_waypoints_reached(now, global_position, local_position, nav_cap->turn_distance);
 
 	return OK;
 }
@@ -1009,5 +1038,5 @@ void mavlink_wpm_message_handler(const mavlink_message_t *msg, const struct vehi
 		}
 	}
 
-	check_waypoints_reached(now, global_pos, local_pos);
+	// check_waypoints_reached(now, global_pos, local_pos);
 }

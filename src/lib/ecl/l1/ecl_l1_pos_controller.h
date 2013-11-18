@@ -131,6 +131,14 @@ public:
 
 
 	/**
+	 * Returns true if following a circle (loiter)
+	 */
+	bool circle_mode() {
+		return _circle_mode;
+	}
+
+
+	/**
 	 * Get the switch distance
 	 * 
 	 * This is the distance at which the system will
@@ -214,6 +222,15 @@ public:
 		_K_L1 = 4.0f * _L1_damping * _L1_damping;
 	}
 
+
+	/**
+	 * Set the maximum roll angle output in radians
+	 *
+	 */
+	void set_l1_roll_limit(float roll_lim_rad) {
+		_roll_lim_rad = roll_lim_rad;
+	}
+
 private:
 
 	float _lateral_accel;		///< Lateral acceleration setpoint in m/s^2
@@ -229,6 +246,8 @@ private:
 	float _L1_ratio;		///< L1 ratio for navigation
 	float _K_L1;			///< L1 control gain for _L1_damping
 	float _heading_omega;		///< Normalized frequency
+
+	float _roll_lim_rad;  ///<maximum roll angle
 
 	/**
 	 * Convert a 2D vector from WGS84 to planar coordinates.

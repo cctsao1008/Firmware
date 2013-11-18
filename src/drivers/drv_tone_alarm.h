@@ -31,7 +31,9 @@
  *
  ****************************************************************************/
 
-/*
+/**
+ * @file drv_tone_alarm.h
+ *
  * Driver for the PX4 audio alarm port, /dev/tone_alarm.
  *
  * The tone_alarm driver supports a set of predefined "alarm"
@@ -144,6 +146,7 @@ enum {
     TONE_ARMING_WARNING_TUNE,
     TONE_BATTERY_WARNING_SLOW_TUNE,
     TONE_BATTERY_WARNING_FAST_TUNE,
+	TONE_GPS_WARNING_TUNE,
     TONE_NUMBER_OF_TUNES
 };
 

@@ -83,15 +83,11 @@ then
 	usleep 5000
 
 	sh /etc/init.d/rc.io
-	# Set PWM values for DJI ESCs
-	px4io idle 900 900 900 900
-	px4io min 1200 1200 1200 1200
-	px4io max 1800 1800 1800 1800
 else
-	fmu mode_pwm
 	# Start MAVLink (on UART1 / ttyS0)
 	mavlink start -d /dev/ttyS0
 	usleep 5000
+	fmu mode_pwm
 	param set BAT_V_SCALING 0.004593
 	set EXIT_ON_END yes
 fi
@@ -105,11 +101,6 @@ then
 else
     mixer load /dev/pwm_output /etc/mixers/FMU_quad_+.mix
 fi
-
-#
-# Set PWM output frequency
-#
-#pwm -u 400 -m 0xff
 
 #
 # Start common for all multirotors apps

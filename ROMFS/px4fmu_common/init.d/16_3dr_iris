@@ -10,12 +10,12 @@ then
 	# Set all params here, then disable autoconfig
 	param set SYS_AUTOCONFIG 0
 
-	param set MC_ATTRATE_D 0.006
+	param set MC_ATTRATE_D 0.004
 	param set MC_ATTRATE_I 0.0
-	param set MC_ATTRATE_P 0.17
+	param set MC_ATTRATE_P 0.13
 	param set MC_ATT_D 0.0
 	param set MC_ATT_I 0.0
-	param set MC_ATT_P 5.0
+	param set MC_ATT_P 9.0
 	param set MC_YAWPOS_D 0.0
 	param set MC_YAWPOS_I 0.15
 	param set MC_YAWPOS_P 0.5
@@ -31,7 +31,7 @@ fi
 # MAV_TYPE     2 = quadrotor
 #
 param set MAV_TYPE 2
- 
+
 set EXIT_ON_END no
 
 #
@@ -44,16 +44,12 @@ then
 	usleep 5000
 
 	sh /etc/init.d/rc.io
-	# Set PWM values for DJI ESCs
-	px4io idle 900 900 900 900
-	px4io min 1200 1200 1200 1200
-	px4io max 1800 1800 1800 1800
 else
 	# Start MAVLink (on UART1 / ttyS0)
 	mavlink start -d /dev/ttyS0
 	usleep 5000
 	fmu mode_pwm
-	param set BAT_V_SCALING 0.004593
+	param set BAT_V_SCALING 0.0098
 	set EXIT_ON_END yes
 fi
 
@@ -65,7 +61,13 @@ mixer load /dev/pwm_output /etc/mixers/FMU_quad_w.mix
 #
 # Set PWM output frequency
 #
-pwm -u 400 -m 0xff
+pwm rate -c 1234 -r 400
+
+#
+# Set disarmed, min and max PWM signals
+#
+pwm disarmed -c 1234 -p 900
+pwm min -c 1234 -p 1050
 
 #
 # Start common for all multirotors apps

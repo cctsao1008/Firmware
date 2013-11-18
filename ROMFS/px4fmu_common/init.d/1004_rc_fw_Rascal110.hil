@@ -32,6 +32,9 @@ then
 	param set FW_T_SINK_MAX 5.0
 	param set FW_T_SINK_MIN 4.0
 	param set FW_Y_ROLLFF 1.1
+	param set FW_L1_PERIOD 16
+	param set RC_SCALE_ROLL 1.0
+	param set RC_SCALE_PITCH 1.0
 
 	param set SYS_AUTOCONFIG 0
 	param save
@@ -51,11 +54,6 @@ hil mode_pwm
 #              see https://pixhawk.ethz.ch/mavlink/
 #
 param set MAV_TYPE 1
-
-#
-# Start the commander (depends on orb, mavlink)
-#
-commander start
 
 #
 # Check if we got an IO
@@ -81,7 +79,18 @@ att_pos_estimator_ekf start
 #
 # Load mixer and start controllers (depends on px4io)
 #
-mixer load /dev/pwm_output /etc/mixers/FMU_AET.mix
+set MODE autostart
+mixer load /dev/pwm_output /etc/mixers/FMU_AERT.mix
+if [ -f /fs/microsd/etc/mixers/FMU_AERT.mix ]
+then
+	echo "Using /fs/microsd/etc/mixers/FMU_AERT.mix"
+	mixer load /dev/pwm_output /fs/microsd/etc/mixers/FMU_AERT.mix
+else
+	echo "Using /etc/mixers/FMU_AERT.mix"
+	mixer load /dev/pwm_output /etc/mixers/FMU_AERT.mix
+fi
+
+
 fw_pos_control_l1 start
 fw_att_control start
 
