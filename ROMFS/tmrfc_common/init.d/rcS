@@ -12,15 +12,15 @@ echo "[init] MODE ="$MODE
 #
 # Try to mount the microSD card.
 #
-echo "[init] Looking for microSD..."
+echo "[init] looking for microSD..."
 if mount -t vfat /dev/mmcsd0 /fs/microsd
 then
-	echo "[init] Card mounted at /fs/microsd"
+	echo "[init] card mounted at /fs/microsd"
 	# Start playing the startup tune
 	echo "[init] tone_alarm start"
 	tone_alarm start
 else
-	echo "[init] No microSD card found"
+	echo "[init] no microSD card found"
 	# Play SOS
 	tone_alarm error
 fi
@@ -33,13 +33,13 @@ fi
 #
 if [ -f /fs/microsd/etc/rc ]
 then
-	echo "[init] Reading /fs/microsd/etc/rc"
+	echo "[init] reading /fs/microsd/etc/rc"
 	sh /fs/microsd/etc/rc
 fi
 # Also consider rc.txt files
 if [ -f /fs/microsd/etc/rc.txt ]
 then
-	echo "[init] Reading /fs/microsd/etc/rc.txt"
+	echo "[init] reading /fs/microsd/etc/rc.txt"
 	sh /fs/microsd/etc/rc.txt
 fi
 
@@ -58,27 +58,80 @@ then
 	#
 	echo "[init] Start the ORB"
 	uorb start
-
+	
 	#
 	# Load microSD params
 	#
-	param select /fs/microsd/params
-	if [ -f /fs/microsd/params ]
+	#if ramtron start
+	#then
+	#	param select /ramtron/params
+	#	if [ -f /ramtron/params ]
+	#	then
+	#		param load /ramtron/params
+	#	fi
+	#else
+		param select /fs/microsd/params
+		if [ -f /fs/microsd/params ]
+		then
+			if param load /fs/microsd/params
+			then
+				echo "Parameters loaded"
+			else
+				echo "Parameter file corrupt - ignoring"
+			fi
+		fi
+	#fi
+	
+	#
+	
+	#
+	# Start the Commander (needs to be this early for in-air-restarts)
+	#
+	commander start
+
+	if param compare SYS_AUTOSTART 1000
 	then
-		echo "[init] param load /fs/microsd/params"
-		param load /fs/microsd/params
+		sh /etc/init.d/1000_rc_fw_easystar.hil		
+		set MODE custom
+	fi
+	
+	if param compare SYS_AUTOSTART 1001
+	then
+		sh /etc/init.d/1001_rc_quad.hil
+		set MODE custom
+	fi
+	
+	if param compare SYS_AUTOSTART 1002
+	then
+		sh /etc/init.d/1002_rc_fw_state.hil
+		set MODE custom
+	fi
+	
+	if param compare SYS_AUTOSTART 1003
+	then
+		sh /etc/init.d/1003_rc_quad_+.hil
+		set MODE custom
 	fi
 
-	#
-	# Try to get an USB console
-	#echo "Try to get an USB console"
-	#nshterm /dev/ttyACM0 &
+	if param compare SYS_AUTOSTART 1004
+	then
+		sh /etc/init.d/1004_rc_fw_Rascal110.hil
+		set MODE custom
+	fi
+	
+	#if [ $MODE != custom ]
+	#then
+		# Try to get an USB console
+		#echo "Try to get an USB console"
+		#nshterm /dev/ttyACM0 &
+	#fi
+
 	
 	#
 	# Check if auto-setup from one of the standard scripts is wanted
 	# SYS_AUTOSTART = 0 means no autostart (default)
 	#
-
+	
 	if param compare SYS_AUTOSTART 8
 	then
 		echo "Load .. 08_ardrone"
@@ -106,6 +159,22 @@ then
 		sh /etc/init.d/11_dji_f450
 		set MODE custom
 	fi
+
+	if param compare SYS_AUTOSTART 12
+	then
+		echo "Load .. FMU_hex_x.mix"
+		set MIXER /etc/mixers/FMU_hex_x.mix
+		sh /etc/init.d/12-13_hex
+		set MODE custom
+	fi
+
+	if param compare SYS_AUTOSTART 13
+	then
+		echo "Load .. FMU_hex_+.mix"
+		set MIXER /etc/mixers/FMU_hex_+.mix
+		sh /etc/init.d/12-13_hex
+		set MODE custom
+	fi
 	
 	if param compare SYS_AUTOSTART 15
 	then
@@ -120,7 +189,7 @@ then
 		sh /etc/init.d/16_3dr_iris
 		set MODE custom
 	fi
-	
+
 	if param compare SYS_AUTOSTART 20
 	then
 		echo "Load .. 20_tmr_6a"
@@ -142,6 +211,30 @@ then
 		set MODE custom
 	fi
 	
+	if param compare SYS_AUTOSTART 32
+	then
+		sh /etc/init.d/32_skywalker_x5
+		set MODE custom
+	fi
+
+	if param compare SYS_AUTOSTART 40
+	then
+		sh /etc/init.d/40_io_segway
+		set MODE custom
+	fi
+	
+	if param compare SYS_AUTOSTART 100
+	then
+		sh /etc/init.d/100_mpx_easystar
+		set MODE custom
+	fi
+
+	if param compare SYS_AUTOSTART 101
+	then
+		sh /etc/init.d/101_hk_bixler
+		set MODE custom
+	fi
+	
 	# Start any custom extensions that might be missing
 	if [ -f /fs/microsd/etc/rc.local ]
 	then
@@ -153,9 +246,9 @@ then
 	if [ $MODE == autostart ]
 	then
 		# Telemetry port is on both FC boards ttyS2
-		#echo "[init] Start mavlink ( on USART6, 57600  /dev/ttyS2 )"
-		mavlink start -b 57600 -d /dev/ttyS2
-		usleep 5000
+		# but the AR.Drone motors can be get 'flashed'
+		# if starting MAVLink on them - so do not
+		# start it as default (default link: USB)
 	
 		# Start commander
 		echo "[init] Start commander"

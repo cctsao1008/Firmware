@@ -51,7 +51,7 @@
 #include <sys/stat.h>
 
 #include <nuttx/i2c.h>
-#include <nuttx/mtd.h>
+#include <nuttx/mtd/mtd.h>
 #include <nuttx/fs/nxffs.h>
 #include <nuttx/fs/ioctl.h>
 
@@ -498,15 +498,15 @@ pwm_main(int argc, char *argv[])
 
 			ret = ioctl(fd, PWM_SERVO_GET(i), (unsigned long)&spos);
 			if (ret == OK) {
-				printf("channel %u: %u us", i+1, spos);
+				printf("channel %2u: %4u us", i+1, spos);
 
 				if (info_alt_rate_mask & (1<<i))
-					printf(" (alternative rate: %d Hz", info_alt_rate);
+					printf(" (alternative rate: %3d Hz", info_alt_rate);
 				else
-					printf(" (default rate: %d Hz", info_default_rate);
+					printf(" (default rate: %3d Hz", info_default_rate);
 
 
-				printf(" failsafe: %d, disarmed: %d us, min: %d us, max: %d us)",
+				printf(" failsafe: %d, disarmed: %4d us, min: %4d us, max: %4d us)",
 					failsafe_pwm.values[i], disarmed_pwm.values[i], min_pwm.values[i], max_pwm.values[i]);
 				printf("\n");
 			} else {

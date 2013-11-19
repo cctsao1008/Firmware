@@ -1,6 +1,6 @@
 #!nsh
 
-echo "[init] PX4FMU v1, v2 with or without IO on Phantom FPV"
+echo "[init] PX4FMU v1, v2 with or without IO on HK Bixler"
 
 #
 # Load default params for this platform
@@ -28,7 +28,7 @@ then
 	param set FW_T_SINK_MAX 5.0
 	param set FW_T_SINK_MIN 4.0
 	param set FW_Y_ROLLFF 1.1
-	param set FW_L1_PERIOD 17
+	param set FW_L1_PERIOD 16
 	param set RC_SCALE_ROLL 1.0
 	param set RC_SCALE_PITCH 1.0
 	
@@ -67,13 +67,13 @@ fi
 #
 # Load mixer and start controllers (depends on px4io)
 #
-if [ -f /fs/microsd/etc/mixers/FMU_Q.mix ]
+if [ -f /fs/microsd/etc/mixers/FMU_AERT.mix ]
 then
-	echo "Using /fs/microsd/etc/mixers/FMU_Q.mix"
-	mixer load /dev/pwm_output /fs/microsd/etc/mixers/FMU_Q.mix
+	echo "Using /fs/microsd/etc/mixers/FMU_AERT.mix"
+	mixer load /dev/pwm_output /fs/microsd/etc/mixers/FMU_AERT.mix
 else
 	echo "Using /etc/mixers/FMU_Q.mix"
-	mixer load /dev/pwm_output /etc/mixers/FMU_Q.mix
+	mixer load /dev/pwm_output /etc/mixers/FMU_AERT.mix
 fi
 
 #

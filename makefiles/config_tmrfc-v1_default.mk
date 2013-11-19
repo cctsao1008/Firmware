@@ -46,7 +46,7 @@ MODULES		+= drivers/hil
 #MODULES	+= drivers/blinkm
 #MODULES	+= drivers/rgbled
 #MODULES	+= drivers/mkblctrl
-#MODULES	+= drivers/md25
+#MODULES	+= drivers/roboclaw
 MODULES		+= drivers/airspeed
 MODULES		+= drivers/ets_airspeed
 MODULES		+= drivers/meas_airspeed
@@ -76,6 +76,7 @@ MODULES		+= systemcmds/nshterm
 # General system control
 #
 MODULES		+= modules/commander
+MODULES		+= modules/navigator
 MODULES		+= modules/mavlink
 MODULES		+= modules/mavlink_onboard
 #MODULES	+= modules/gpio_led
@@ -91,13 +92,13 @@ MODULES		+= examples/flow_position_estimator
 #
 # Vehicle Control
 #
-#MODULES	+= modules/segway # XXX needs state machine update
-#MODULES	+= modules/fw_pos_control_l1
-#MODULES	+= modules/fw_att_control
+#MODULES	+= modules/segway # XXX Needs GCC 4.7 fix
+MODULES		+= modules/fw_pos_control_l1
+MODULES		+= modules/fw_att_control
 MODULES		+= modules/multirotor_att_control
 MODULES		+= modules/multirotor_pos_control
-#MODULES	+= examples/flow_position_control
-#MODULES	+= examples/flow_speed_control
+MODULES		+= examples/flow_position_control
+MODULES		+= examples/flow_speed_control
 
 #
 # Logging
@@ -107,8 +108,8 @@ MODULES		+= modules/sdlog2
 #
 # Unit tests
 #
-MODULES 	+= modules/unit_test
-MODULES 	+= modules/commander/commander_tests
+#MODULES 	+= modules/unit_test
+#MODULES 	+= modules/commander/commander_tests
 
 #
 # Library modules
@@ -124,8 +125,10 @@ MODULES		+= modules/uORB
 LIBRARIES	+= lib/mathlib/CMSIS
 MODULES		+= lib/mathlib
 MODULES		+= lib/mathlib/math/filter
-#MODULES	+= lib/ecl
+MODULES		+= lib/ecl
+MODULES		+= lib/external_lgpl
 MODULES		+= lib/geo
+MODULES		+= lib/conversion
 
 #
 # Demo apps
@@ -145,7 +148,10 @@ MODULES		+= examples/px4_mavlink_debug
 
 # Tutorial code from
 # https://pixhawk.ethz.ch/px4/dev/example_fixedwing_control
-MODULES			+= examples/fixedwing_control
+#MODULES			+= examples/fixedwing_control
+
+# Hardware test
+#MODULES			+= examples/hwtest
 
 #
 # Transitional support - add commands from the NuttX export archive.
@@ -159,7 +165,7 @@ define _B
 	$(strip $1).$(or $(strip $2),SCHED_PRIORITY_DEFAULT).$(or $(strip $3),CONFIG_PTHREAD_STACK_DEFAULT).$(strip $4)
 endef
 
-#                  command                 priority                   stack  entrypoint CONFIG_EXAMPLES_CDCACM
+#                  command                 priority                   stack  entrypoint
 BUILTIN_COMMANDS := \
 	$(call _B, sercon,                 ,                          2048,  sercon_main                ) \
 	$(call _B, serdis,                 ,                          2048,  serdis_main                ) \

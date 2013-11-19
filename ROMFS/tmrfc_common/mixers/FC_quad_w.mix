@@ -1,6 +1,0 @@
-Multirotor mixer for TMRFC
-===========================
-
-This file defines a single mixer for a quadrotor with a wide configuration.  All controls are mixed 100%.
-
-R: 4w 10000 10000 10000 0

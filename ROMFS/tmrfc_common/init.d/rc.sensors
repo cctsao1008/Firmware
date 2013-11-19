@@ -7,16 +7,10 @@
 # Start sensor drivers here.
 #
 
-#
-# Check for UORB
-#
-if uorb start
+if adc start
 then
-	echo "uORB started"
+	echo "[ADC] Ready."
 fi
-
-echo "ADC"
-adc start
 
 if mpu6050 start
 then
@@ -43,6 +37,5 @@ fi
 #
 if sensors start
 then
-	sleep 2
 	preflight_check &
 fi
