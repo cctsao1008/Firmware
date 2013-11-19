@@ -10,11 +10,6 @@ set MODE autostart
 echo "[init] MODE ="$MODE
 
 #
-# Look for an init script on the microSD card.
-#
-# To prevent automatic startup in the current flight mode,
-# the script should set MODE to some other value.
-#
 if [ $MODE == autostart ]
 then
 	#
@@ -34,37 +29,89 @@ then
 	#
 	# Load microSD params
 	#
-	param select /fs/microsd/params
-	if [ -f /fs/microsd/params ]
-	then
+	#if ramtron start
+	#then
+	#	param select /ramtron/params
+	#	if [ -f /ramtron/params ]
+	#	then
+	#		param load /ramtron/params
+	#	fi
+	#else
+		param select /fs/microsd/params
+		if [ -f /fs/microsd/params ]
+		then
 		echo "[init] param load /fs/microsd/params"
-		param load /fs/microsd/params
+			if param load /fs/microsd/params
+			then
+				echo "Parameters loaded"
+			else
+				echo "Parameter file corrupt - ignoring"
+			fi
+		fi
+	#fi
+	
+	#
+	#
+	# Start the Commander (needs to be this early for in-air-restarts)
+	#
+	commander start
+
+	if param compare SYS_AUTOSTART 1000
+	then
+		sh /etc/init.d/1000_rc_fw_easystar.hil		
+		set MODE custom
+	fi
+	
+	if param compare SYS_AUTOSTART 1001
+	then
+		sh /etc/init.d/1001_rc_quad.hil
+		set MODE custom
+	fi
+	
+	if param compare SYS_AUTOSTART 1002
+	then
+		sh /etc/init.d/1002_rc_fw_state.hil
+		set MODE custom
+	fi
+	
+	if param compare SYS_AUTOSTART 1003
+	then
+		sh /etc/init.d/1003_rc_quad_+.hil
+		set MODE custom
 	fi
 
-	#
+	if param compare SYS_AUTOSTART 1004
+	then
+		sh /etc/init.d/1004_rc_fw_Rascal110.hil
+		set MODE custom
+	fi
+	
+	#if [ $MODE != custom ]
 	# Try to get an USB console
-	#echo "Try to get an USB console"
+	echo "Try to get an USB console"
 	nshterm /dev/ttyACM0 &
+	#fi
 
+	
 	#
 	# Check if auto-setup from one of the standard scripts is wanted
 	# SYS_AUTOSTART = 0 means no autostart (default)
 	#
-
+	
 	if param compare SYS_AUTOSTART 8
 	then
 		echo "Load .. 08_ardrone"
 		sh /etc/init.d/08_ardrone
 		set MODE custom
 	fi
-
+	
 	if param compare SYS_AUTOSTART 9
 	then
 		echo "Load .. 09_ardrone_flow"
 		sh /etc/init.d/09_ardrone_flow
 		set MODE custom
 	fi
-
+	
 	if param compare SYS_AUTOSTART 10
 	then
 		echo "Load .. 10_dji_f330"
@@ -79,6 +126,22 @@ then
 		set MODE custom
 	fi
 
+	if param compare SYS_AUTOSTART 12
+	then
+		echo "Load .. FMU_hex_x.mix"
+		set MIXER /etc/mixers/FMU_hex_x.mix
+		sh /etc/init.d/12-13_hex
+		set MODE custom
+	fi
+
+	if param compare SYS_AUTOSTART 13
+	then
+		echo "Load .. FMU_hex_+.mix"
+		set MIXER /etc/mixers/FMU_hex_+.mix
+		sh /etc/init.d/12-13_hex
+		set MODE custom
+	fi
+	
 	if param compare SYS_AUTOSTART 15
 	then
 		echo "Load .. 15_tbs_discovery"
@@ -106,38 +169,62 @@ then
 		sh /etc/init.d/30_io_camflyer
 		set MODE custom
 	fi
-
+	
 	if param compare SYS_AUTOSTART 31
 	then
-		echo "Load .. 31_io_phantom"
+	        echo "Load .. 31_io_phantom"
 		sh /etc/init.d/31_io_phantom
 		set MODE custom
 	fi
+	
+	if param compare SYS_AUTOSTART 32
+	then
+		sh /etc/init.d/32_skywalker_x5
+		set MODE custom
+	fi
 
+	if param compare SYS_AUTOSTART 40
+	then
+		sh /etc/init.d/40_io_segway
+		set MODE custom
+	fi
+	
+	if param compare SYS_AUTOSTART 100
+	then
+		sh /etc/init.d/100_mpx_easystar
+		set MODE custom
+	fi
+
+	if param compare SYS_AUTOSTART 101
+	then
+		sh /etc/init.d/101_hk_bixler
+		set MODE custom
+	fi
+	
 	# Start any custom extensions that might be missing
 	if [ -f /fs/microsd/etc/rc.local ]
 	then
 		echo "[init] Reading /fs/microsd/etc/rc.local"
 		sh /fs/microsd/etc/rc.local
 	fi
-
+	
 	# If none of the autostart scripts triggered, get a minimal setup
 	if [ $MODE == autostart ]
 	then
 		# Telemetry port is on both FC boards ttyS2
 		#echo "[init] Start mavlink ( on USART6, 57600  /dev/ttyS2 )"
-		mavlink start -b 57600 -d /dev/ttyS2
-		usleep 5000
-
+		# if starting MAVLink on them - so do not
+		# start it as default (default link: USB)
+	
 		# Start commander
 		echo "[init] Start commander"
 		commander start
-
+	
 		if fc mode_serial
 		then
 			echo "FC driver (no PWM) started"
 		fi
-
+	
 		# Start sensors
 		echo "[init] Start sensors"
 		sh /etc/init.d/rc.sensors
@@ -145,11 +232,11 @@ then
 		# Start one of the estimators
 		echo "[init] Start attitude_estimator_ekf"
 		attitude_estimator_ekf start
-
+	
 		# Start GPS
 		echo "[init] Start GPS >> need to implement"
 		#gps start
-
+	
 	fi
 
 # End of autostart

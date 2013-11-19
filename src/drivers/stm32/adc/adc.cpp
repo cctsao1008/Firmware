@@ -178,12 +178,12 @@ int
 ADC::init()
 {
     /* do calibration if supported */
-#ifdef ADC_CR2_CAL
+    #ifdef ADC_CR2_CAL
     rCR2 |= ADC_CR2_CAL;
     usleep(100);
     if (rCR2 & ADC_CR2_CAL)
         return -1;
-#endif
+    #endif
 
     /* arbitrarily configure all channels for 55 cycle sample time */
     rSMPR1 = 0b00000011011011011011011011011011;
@@ -194,16 +194,22 @@ ADC::init()
 
     /* enable the temperature sensor / Vrefint channel if supported*/
     rCR2 = 
-#ifdef ADC_CR2_TSVREFE
+    #ifdef ADC_CR2_TSVREFE
         /* enable the temperature sensor in CR2 */
         ADC_CR2_TSVREFE |
-#endif
+    #endif
         0;
 
-#ifdef ADC_CCR_TSVREFE
+    #ifdef ADC_CCR_TSVREFE
     /* enable temperature sensor in CCR */
     rCCR = ADC_CCR_TSVREFE;
-#endif
+    #endif
+
+    #ifdef CONFIG_ARCH_BOARD_TMRFC_V1
+	/* wake up the temperature sensor from power down mode, and switch to the battery voltage */
+    modifyreg32(STM32_ADC_CCR, 0, (ADC_CCR_VBATE | ADC_CCR_TSVREFE));
+	usleep(500000);
+	#endif
 
     /* configure for a single-channel sequence */
     rSQR1 = 0;
@@ -357,7 +363,7 @@ test(void)
 
         for (unsigned j = 0; j < channels; j++) {
 			/* 0.8056640625 mV = 3300 mV / 4096 */
-            printf ("ch%02d: %4u (%4.1f mV)  ", data[j].am_channel, data[j].am_data, (float)data[j].am_data * 0.8056640625);
+            printf ("ch%02d:%6.1f mV (%4u)   ", data[j].am_channel, (float)data[j].am_data * 0.8056640625, data[j].am_data);
         }
 
         printf("\n");

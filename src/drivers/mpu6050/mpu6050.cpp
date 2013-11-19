@@ -201,16 +201,14 @@ private:
     unsigned        _call_interval;
     work_s          _work;
 
-    typedef RingBuffer<accel_report> AccelReportBuffer;
-    AccelReportBuffer   *_accel_reports;
+	RingBuffer		*_accel_reports;
 
     struct accel_scale  _accel_scale;
     float           _accel_range_scale;
     float           _accel_range_m_s2;
     orb_advert_t        _accel_topic;
 
-    typedef RingBuffer<gyro_report> GyroReportBuffer;
-    GyroReportBuffer    *_gyro_reports;
+	RingBuffer		*_gyro_reports;
 
     struct gyro_scale   _gyro_scale;
     float           _gyro_range_scale;
@@ -399,7 +397,7 @@ MPU6050::MPU6050(int bus) :
     _gyro_range_rad_s(0.0f),
     _gyro_topic(-1),
     _reads(0),
-    _sample_rate(1000),
+    _sample_rate(1000),//MPU6050_GYRO_DEFAULT_RATE
     _sample_perf(perf_alloc(PC_ELAPSED, "mpu6050_read")),
     _accel_filter_x(MPU6050_ACCEL_DEFAULT_RATE, MPU6050_ACCEL_DEFAULT_DRIVER_FILTER_FREQ),
     _accel_filter_y(MPU6050_ACCEL_DEFAULT_RATE, MPU6050_ACCEL_DEFAULT_DRIVER_FILTER_FREQ),
@@ -465,11 +463,11 @@ MPU6050::init()
     }
 
     /* allocate basic report buffers */
-    _accel_reports = new AccelReportBuffer(2);
+	_accel_reports = new RingBuffer(2, sizeof(accel_report));
     if (_accel_reports == nullptr)
         goto out;
 
-    _gyro_reports = new GyroReportBuffer(2);
+	_gyro_reports = new RingBuffer(2, sizeof(gyro_report));
     if (_gyro_reports == nullptr)
         goto out;
 
@@ -500,14 +498,14 @@ MPU6050::init()
         _gyro_topic = -1;
     } else {
         gyro_report gr;
-        _gyro_reports->get(gr);
+		_gyro_reports->get(&gr);
 
         _gyro_topic = orb_advertise(ORB_ID(sensor_gyro), &gr);
     }
 
     /* advertise accel topic */
     accel_report ar;
-    _accel_reports->get(ar);
+	_accel_reports->get(&ar);
     _accel_topic = orb_advertise(ORB_ID(sensor_accel), &ar);
 
 out:
@@ -675,9 +673,10 @@ MPU6050::read(struct file *filp, char *buffer, size_t buflen)
     accel_report *arp = reinterpret_cast<accel_report *>(buffer);
     int transferred = 0;
     while (count--) {
-        if (!_accel_reports->get(*arp++))
+		if (!_accel_reports->get(arp))
             break;
         transferred++;
+		arp++;
     }
 
     /* return the number of bytes transferred */
@@ -765,12 +764,13 @@ MPU6050::gyro_read(struct file *filp, char *buffer, size_t buflen)
         return -EAGAIN;
 
     /* copy reports out of our buffer to the caller */
-    gyro_report *arp = reinterpret_cast<gyro_report *>(buffer);
+	gyro_report *grp = reinterpret_cast<gyro_report *>(buffer);
     int transferred = 0;
     while (count--) {
-        if (!_gyro_reports->get(*arp++))
+		if (!_gyro_reports->get(grp))
             break;
         transferred++;
+		grp++;
     }
 
     /* return the number of bytes transferred */
@@ -811,7 +811,6 @@ MPU6050::ioctl(struct file *filp, int cmd, unsigned long arg)
 
                 /* adjust to a legal polling interval in Hz */
             default: {
-
                     /* do we need to start internal polling? */
                     bool want_start = (_call_interval == 0);
 
@@ -858,23 +857,14 @@ MPU6050::ioctl(struct file *filp, int cmd, unsigned long arg)
             /* lower bound is mandatory, upper bound is a sanity check */
             if ((arg < 1) || (arg > 100))
                 return -EINVAL;
-
-            /* allocate new buffer */
-            AccelReportBuffer *buf = new AccelReportBuffer(arg);
-
-            if (nullptr == buf)
-                return -ENOMEM;
-            if (buf->size() == 0) {
-                delete buf;
-                return -ENOMEM;
-            }
-
-            /* reset the measurement state machine with the new buffer, free the old */
-            stop();
-            delete _accel_reports;
-            _accel_reports = buf;
-            start();
-
+		
+		irqstate_t flags = irqsave();
+		if (!_accel_reports->resize(arg)) {
+			irqrestore(flags);
+			return -ENOMEM;
+		}
+		irqrestore(flags);
+		
             return OK;
         }
 
@@ -951,23 +941,14 @@ MPU6050::gyro_ioctl(struct file *filp, int cmd, unsigned long arg)
     case SENSORIOCSQUEUEDEPTH: {
             /* lower bound is mandatory, upper bound is a sanity check */
             if ((arg < 1) || (arg > 100))
-                return -EINVAL;
+			return -EINVAL;
 
-            /* allocate new buffer */
-            GyroReportBuffer *buf = new GyroReportBuffer(arg);
-
-            if (nullptr == buf)
-                return -ENOMEM;
-            if (buf->size() == 0) {
-                delete buf;
-                return -ENOMEM;
-            }
-
-            /* reset the measurement state machine with the new buffer, free the old */
-            stop();
-            delete _gyro_reports;
-            _gyro_reports = buf;
-            start();
+		irqstate_t flags = irqsave();
+		if (!_gyro_reports->resize(arg)) {
+			irqrestore(flags);
+			return -ENOMEM;
+		}
+		irqrestore(flags);
 
             return OK;
         }
@@ -1171,7 +1152,7 @@ MPU6050::measure()
 
     /* count measurement */
     _reads++;
-
+#if 0
     /*
      * Convert from big to little endian
      */
@@ -1186,6 +1167,43 @@ MPU6050::measure()
     report.gyro_y = int16_t_from_bytes(mpu_report.gyro_x);
     //report.gyro_z = (-1) * (int16_t_from_bytes(mpu_report.gyro_z));
     report.gyro_z = ~(int16_t_from_bytes(mpu_report.gyro_z)) + 1;
+#else
+    /*
+     * Convert from big to little endian
+     */
+    report.accel_x = int16_t_from_bytes(mpu_report.accel_x);
+    report.accel_y = int16_t_from_bytes(mpu_report.accel_y);
+    report.accel_z = int16_t_from_bytes(mpu_report.accel_z);
+
+    report.temp = int16_t_from_bytes(mpu_report.temp);
+
+    report.gyro_x = int16_t_from_bytes(mpu_report.gyro_x);
+    report.gyro_y = int16_t_from_bytes(mpu_report.gyro_y);
+    report.gyro_z = int16_t_from_bytes(mpu_report.gyro_z);
+
+    /*
+     * Swap x,y axe and negate x,z
+     */
+    int16_t accel_xt = report.accel_y;
+    int16_t accel_yt = report.accel_x;
+    int16_t accel_zt = ((report.accel_z == -32768) ? 32767 : -report.accel_z);
+
+    int16_t gyro_xt = report.gyro_y;
+    int16_t gyro_yt = report.gyro_x;
+    int16_t gyro_zt = ((report.gyro_z == -32768) ? 32767 : -report.gyro_z);
+
+    /*
+     * Apply the swap
+     */
+    report.accel_x = accel_xt;
+    report.accel_y = accel_yt;
+    report.accel_z = accel_zt;
+
+    report.gyro_x = gyro_xt;
+    report.gyro_y = gyro_yt;
+    report.gyro_z = gyro_zt;
+	
+#endif
 
 #if 0
     /*
@@ -1221,7 +1239,7 @@ MPU6050::measure()
      * Adjust and scale results to m/s^2.
      */
     grb.timestamp = arb.timestamp = hrt_absolute_time();
-
+        grb.error_count = arb.error_count = 0; // not reported
 
     /*
      * 1) Scale raw value to SI units using scaling from datasheet.
@@ -1277,10 +1295,10 @@ MPU6050::measure()
     grb.temperature_raw = report.temp;
     grb.temperature = (report.temp) / 361.0f + 35.0f;
 
-    _accel_reports->put(arb);
-    _gyro_reports->put(grb);
+	_accel_reports->force(&arb);
+	_gyro_reports->force(&grb);
 
-    /* notify anyone waiting for data */
+	/* notify anyone waiting for data */
     poll_notify(POLLIN);
     _gyro->parent_poll_notify();
 

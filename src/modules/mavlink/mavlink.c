@@ -531,7 +531,7 @@ int mavlink_thread_main(int argc, char *argv[])
 		case 'b':
 			baudrate = strtoul(optarg, NULL, 10);
 
-			if (baudrate == 0)
+			if (baudrate < 9600 || baudrate > 921600)
 				errx(1, "invalid baud rate '%s'", optarg);
 
 			break;
@@ -690,25 +690,25 @@ int mavlink_thread_main(int argc, char *argv[])
 
 		lowspeed_counter++;
 
-		mavlink_waypoint_eventloop(mavlink_missionlib_get_system_timestamp(), &global_pos, &local_pos);
+		mavlink_waypoint_eventloop(mavlink_missionlib_get_system_timestamp(), &global_pos, &local_pos, &nav_cap);
 
 		/* sleep quarter the time */
 		usleep(25000);
 
 		/* check if waypoint has been reached against the last positions */
-		mavlink_waypoint_eventloop(mavlink_missionlib_get_system_timestamp(), &global_pos, &local_pos);
+		mavlink_waypoint_eventloop(mavlink_missionlib_get_system_timestamp(), &global_pos, &local_pos, &nav_cap);
 
 		/* sleep quarter the time */
 		usleep(25000);
 
 		/* send parameters at 20 Hz (if queued for sending) */
 		mavlink_pm_queued_send();
-		mavlink_waypoint_eventloop(mavlink_missionlib_get_system_timestamp(), &global_pos, &local_pos);
+		mavlink_waypoint_eventloop(mavlink_missionlib_get_system_timestamp(), &global_pos, &local_pos, &nav_cap);
 
 		/* sleep quarter the time */
 		usleep(25000);
 
-		mavlink_waypoint_eventloop(mavlink_missionlib_get_system_timestamp(), &global_pos, &local_pos);
+		mavlink_waypoint_eventloop(mavlink_missionlib_get_system_timestamp(), &global_pos, &local_pos, &nav_cap);
 
 		if (baudrate > 57600) {
 			mavlink_pm_queued_send();

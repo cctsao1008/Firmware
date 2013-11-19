@@ -32,7 +32,9 @@
  ****************************************************************************/
 
 /**
- * @file GPS driver interface.
+ * @file drv_gps.h
+ *
+ * GPS driver interface.
  */
 
 #ifndef _DRV_GPS_H
@@ -46,7 +48,7 @@
 
 #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
 /* USART1 For GPS on TMR-FC v1.0 */
-#define GPS_DEFAULT_UART_PORT "/dev/ttyS0"
+#define GPS_DEFAULT_UART_PORT "/dev/ttyS2"
 #else
 #define GPS_DEFAULT_UART_PORT "/dev/ttyS3"
 #endif
@@ -56,8 +58,7 @@
 typedef enum {
 	GPS_DRIVER_MODE_NONE = 0,
 	GPS_DRIVER_MODE_UBX,
-	GPS_DRIVER_MODE_MTK,
-	GPS_DRIVER_MODE_NMEA,
+	GPS_DRIVER_MODE_MTK
 } gps_driver_mode_t;
 
 
