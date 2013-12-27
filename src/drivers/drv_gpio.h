@@ -54,7 +54,7 @@
 /*
  * PX4FMU GPIO numbers.
  *
- * For shared pins, alternate function 1 selects the non-GPIO mode 
+ * For shared pins, alternate function 1 selects the non-GPIO mode
  * (USART2, CAN2, etc.)
  */
 # define GPIO_EXT_1		(1<<0)		/**< high-power GPIO 1 */
@@ -151,5 +151,7 @@
 
 /** read all the GPIOs and return their values in *(uint32_t *)arg */
 #define GPIO_GET	GPIOC(12)
+
+#define GPIO_SENSOR_RAIL_RESET	GPIOC(13)
 
 #endif /* _DRV_GPIO_H */
