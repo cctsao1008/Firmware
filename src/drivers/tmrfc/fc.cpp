@@ -69,7 +69,6 @@
 #include <drivers/drv_rc_input.h>
 
 #include <uORB/topics/actuator_controls.h>
-#include <uORB/topics/actuator_controls_effective.h>
 #include <uORB/topics/actuator_outputs.h>
 #include <uORB/topics/actuator_armed.h>
 
@@ -121,7 +120,6 @@ private:
     int     _t_actuators;
     int     _t_actuator_armed;
     orb_advert_t    _t_outputs;
-    orb_advert_t    _t_actuators_effective;
     unsigned    _num_outputs;
     bool        _primary_pwm_device;
 
@@ -162,6 +160,7 @@ private:
     static const unsigned   _ngpio;
 
     void        gpio_reset(void);
+	void		sensor_reset(int ms);
     void        gpio_set_function(uint32_t gpios, int function);
     void        gpio_write(uint32_t gpios, int function);
     uint32_t    gpio_read(void);
@@ -202,7 +201,6 @@ TMRFC::TMRFC() :
     _t_actuators(-1),
     _t_actuator_armed(-1),
     _t_outputs(0),
-    _t_actuators_effective(0),
     _num_outputs(0),
     _primary_pwm_device(false),
     _task_should_exit(false),
@@ -320,6 +318,7 @@ TMRFC::set_mode(Mode mode)
         set_pwm_rate(_pwm_alt_rate_channels, _pwm_default_rate, _pwm_alt_rate);
 
         break;
+
     case MODE_4PWM:
         debug("MODE_4PWM");
         
@@ -333,6 +332,7 @@ TMRFC::set_mode(Mode mode)
         set_pwm_rate(_pwm_alt_rate_channels, _pwm_default_rate, _pwm_alt_rate);
 
         break;
+
     case MODE_6PWM:
         debug("MODE_6PWM");
         
@@ -416,6 +416,7 @@ TMRFC::set_pwm_rate(uint32_t rate_map, unsigned default_rate, unsigned alt_rate)
 
             // get the channel mask for this rate group
             uint32_t mask = up_pwm_servo_get_rate_group(group);
+
             if (mask == 0)
                 continue;
 
@@ -429,6 +430,7 @@ TMRFC::set_pwm_rate(uint32_t rate_map, unsigned default_rate, unsigned alt_rate)
                     // not a legal map, bail
                     return -EINVAL;
                 }
+
             } else {
                 // set it - errors here are unexpected
                 if (alt != 0) {
@@ -436,6 +438,7 @@ TMRFC::set_pwm_rate(uint32_t rate_map, unsigned default_rate, unsigned alt_rate)
                         warn("rate group set alt failed");
                         return -EINVAL;
                     }
+
                 } else {
                     if (up_pwm_servo_set_rate_group_update(group, _pwm_default_rate) != OK) {
                         warn("rate group set default failed");
@@ -445,6 +448,7 @@ TMRFC::set_pwm_rate(uint32_t rate_map, unsigned default_rate, unsigned alt_rate)
             }
         }
     }
+
     _pwm_alt_rate_channels = rate_map;
     _pwm_default_rate = default_rate;
     _pwm_alt_rate = alt_rate;
@@ -486,13 +490,6 @@ TMRFC::task_main()
     _t_outputs = orb_advertise(_primary_pwm_device ? ORB_ID_VEHICLE_CONTROLS : ORB_ID(actuator_outputs_1),
                    &outputs);
 
-    /* advertise the effective control inputs */
-    actuator_controls_effective_s controls_effective;
-    memset(&controls_effective, 0, sizeof(controls_effective));
-    /* advertise the effective control inputs */
-    _t_actuators_effective = orb_advertise(_primary_pwm_device ? ORB_ID_VEHICLE_ATTITUDE_CONTROLS_EFFECTIVE : ORB_ID(actuator_controls_effective_1),
-                   &controls_effective);
-
     pollfd fds[2];
     fds[0].fd = _t_actuators;
     fds[0].events = POLLIN;
@@ -523,6 +520,7 @@ TMRFC::task_main()
          * We always mix at max rate; some channels may update slower.
          */
         unsigned max_rate = (_pwm_default_rate > _pwm_alt_rate) ? _pwm_default_rate : _pwm_alt_rate;
+
         if (_current_update_rate != max_rate) {
             _current_update_rate = max_rate;
             int update_rate_in_ms = int(1000 / _current_update_rate);
@@ -531,6 +529,7 @@ TMRFC::task_main()
             if (update_rate_in_ms < 2) {
                 update_rate_in_ms = 2;
             }
+
             /* reject slower than 10 Hz updates */
             if (update_rate_in_ms > 100) {
                 update_rate_in_ms = 100;
@@ -552,6 +551,7 @@ TMRFC::task_main()
             log("poll error %d", errno);
 			usleep(1000000);
 			continue;
+
 		} else if (ret == 0) {
 			/* timeout: no control data, switch to failsafe values */
 //			warnx("no PWM: failsafe");
@@ -562,7 +562,7 @@ TMRFC::task_main()
         if (fds[0].revents & POLLIN) {
 
             /* get controls - must always do this to avoid spinning */
-            orb_copy(ORB_ID_VEHICLE_ATTITUDE_CONTROLS, _t_actuators, &_controls);
+				orb_copy(_primary_pwm_device ? ORB_ID_VEHICLE_ATTITUDE_CONTROLS : ORB_ID(actuator_controls_1), _t_actuators, &_controls);
 
             /* can we mix? */
             if (_mixers != nullptr) {
@@ -573,21 +573,26 @@ TMRFC::task_main()
                 case MODE_2PWM:
                     num_outputs = 2;
                     break;
+
                 case MODE_4PWM:
                     num_outputs = 4;
                     break;
+
                 case MODE_6PWM:
                     num_outputs = 6;
                     break;
                 case MODE_8PWM:
                     num_outputs = 8;
                     break;
+
                 case MODE_10PWM:
                     num_outputs = 10;
                     break;
+
                 case MODE_12PWM:
                     num_outputs = 12;
                     break;
+
                 default:
                     num_outputs = 0;
                     break;
@@ -617,12 +622,6 @@ TMRFC::task_main()
 
 					pwm_limit_calc(_armed, num_outputs, _disarmed_pwm, _min_pwm, _max_pwm, outputs.output, pwm_limited, &_pwm_limit);
 
-					/* output actual limited values */
-					for (unsigned i = 0; i < num_outputs; i++) {
-						controls_effective.control_effective[i] = (float)pwm_limited[i];
-					}
-					orb_publish(_primary_pwm_device ? ORB_ID_VEHICLE_ATTITUDE_CONTROLS_EFFECTIVE : ORB_ID(actuator_controls_effective_1), _t_actuators_effective, &controls_effective);
-
 					/* output to the servos */
 					for (unsigned i = 0; i < num_outputs; i++) {
 						up_pwm_servo_set(i, pwm_limited[i]);
@@ -642,11 +641,13 @@ TMRFC::task_main()
 
 				/* update the armed status and check that we're not locked down */
 				bool set_armed = aa.armed && !aa.lockdown;
+
 				if (_armed != set_armed)
 					_armed = set_armed;
 
 				/* update PWM status if armed or if disarmed PWM values are set */
 				bool pwm_on = (aa.armed || _num_disarmed_set > 0);
+
 				if (_pwm_on != pwm_on) {
 					_pwm_on = pwm_on;
 					up_pwm_servo_arm(pwm_on);
@@ -655,30 +656,36 @@ TMRFC::task_main()
 		}
 
 #ifdef HRT_PPM_CHANNEL
-        // see if we have new PPM input data
-        if (ppm_last_valid_decode != rc_in.timestamp) {
-            // we have a new PPM frame. Publish it.
-            rc_in.channel_count = ppm_decoded_channels;
-            if (rc_in.channel_count > RC_INPUT_MAX_CHANNELS) {
-                rc_in.channel_count = RC_INPUT_MAX_CHANNELS;
-            }
-            for (uint8_t i=0; i<rc_in.channel_count; i++) {
-                rc_in.values[i] = ppm_buffer[i];
-            }
-            rc_in.timestamp = ppm_last_valid_decode;
 
-            /* lazily advertise on first publication */
-            if (to_input_rc == 0) {
-                to_input_rc = orb_advertise(ORB_ID(input_rc), &rc_in);
-            } else { 
-                orb_publish(ORB_ID(input_rc), to_input_rc, &rc_in);
-            }
-        }
+		// see if we have new PPM input data
+		if (ppm_last_valid_decode != rc_in.timestamp) {
+			// we have a new PPM frame. Publish it.
+			rc_in.channel_count = ppm_decoded_channels;
+
+			if (rc_in.channel_count > RC_INPUT_MAX_CHANNELS) {
+				rc_in.channel_count = RC_INPUT_MAX_CHANNELS;
+			}
+
+			for (uint8_t i = 0; i < rc_in.channel_count; i++) {
+				rc_in.values[i] = ppm_buffer[i];
+			}
+
+			rc_in.timestamp = ppm_last_valid_decode;
+
+			/* lazily advertise on first publication */
+			if (to_input_rc == 0) {
+				to_input_rc = orb_advertise(ORB_ID(input_rc), &rc_in);
+
+			} else {
+				orb_publish(ORB_ID(input_rc), to_input_rc, &rc_in);
+			}
+		}
+
 #endif
+
     }
 
     ::close(_t_actuators);
-    ::close(_t_actuators_effective);
     ::close(_t_actuator_armed);
 
     /* make sure servos are off */
@@ -784,142 +791,176 @@ TMRFC::pwm_ioctl(file *filp, int cmd, unsigned long arg)
 		break;
 
 	case PWM_SERVO_SET_FAILSAFE_PWM: {
-		struct pwm_output_values *pwm = (struct pwm_output_values*)arg;
-		/* discard if too many values are sent */
-		if (pwm->channel_count > _max_actuators) {
-			ret = -EINVAL;
+			struct pwm_output_values *pwm = (struct pwm_output_values *)arg;
+
+			/* discard if too many values are sent */
+			if (pwm->channel_count > _max_actuators) {
+				ret = -EINVAL;
+				break;
+			}
+
+			for (unsigned i = 0; i < pwm->channel_count; i++) {
+				if (pwm->values[i] == 0) {
+					/* ignore 0 */
+				} else if (pwm->values[i] > PWM_HIGHEST_MAX) {
+					_failsafe_pwm[i] = PWM_HIGHEST_MAX;
+
+				} else if (pwm->values[i] < PWM_LOWEST_MIN) {
+					_failsafe_pwm[i] = PWM_LOWEST_MIN;
+
+				} else {
+					_failsafe_pwm[i] = pwm->values[i];
+				}
+			}
+
+			/*
+			 * update the counter
+			 * this is needed to decide if disarmed PWM output should be turned on or not
+			 */
+			_num_failsafe_set = 0;
+
+			for (unsigned i = 0; i < _max_actuators; i++) {
+				if (_failsafe_pwm[i] > 0)
+					_num_failsafe_set++;
+			}
+
 			break;
 		}
-		for (unsigned i = 0; i < pwm->channel_count; i++) {
-			if (pwm->values[i] == 0) {
-				/* ignore 0 */
-			} else if (pwm->values[i] > PWM_HIGHEST_MAX) {
-				_failsafe_pwm[i] = PWM_HIGHEST_MAX;
-			} else if (pwm->values[i] < PWM_LOWEST_MIN) {
-				_failsafe_pwm[i] = PWM_LOWEST_MIN;
-			} else {
-				_failsafe_pwm[i] = pwm->values[i];
-			}
-		}
 
-		/*
-		 * update the counter
-		 * this is needed to decide if disarmed PWM output should be turned on or not
-		 */
-		_num_failsafe_set = 0;
-		for (unsigned i = 0; i < _max_actuators; i++) {
-			if (_failsafe_pwm[i] > 0)
-				_num_failsafe_set++;
-		}
-		break;
-	}
 	case PWM_SERVO_GET_FAILSAFE_PWM: {
-		struct pwm_output_values *pwm = (struct pwm_output_values*)arg;
-		for (unsigned i = 0; i < _max_actuators; i++) {
-			pwm->values[i] = _failsafe_pwm[i];
+			struct pwm_output_values *pwm = (struct pwm_output_values *)arg;
+
+			for (unsigned i = 0; i < _max_actuators; i++) {
+				pwm->values[i] = _failsafe_pwm[i];
+			}
+
+			pwm->channel_count = _max_actuators;
+			break;
 		}
-		pwm->channel_count = _max_actuators;
-		break;
-	}
 
 	case PWM_SERVO_SET_DISARMED_PWM: {
-		struct pwm_output_values *pwm = (struct pwm_output_values*)arg;
-		/* discard if too many values are sent */
-		if (pwm->channel_count > _max_actuators) {
-			ret = -EINVAL;
+			struct pwm_output_values *pwm = (struct pwm_output_values *)arg;
+
+			/* discard if too many values are sent */
+			if (pwm->channel_count > _max_actuators) {
+				ret = -EINVAL;
+				break;
+			}
+
+			for (unsigned i = 0; i < pwm->channel_count; i++) {
+				if (pwm->values[i] == 0) {
+					/* ignore 0 */
+				} else if (pwm->values[i] > PWM_HIGHEST_MAX) {
+					_disarmed_pwm[i] = PWM_HIGHEST_MAX;
+
+				} else if (pwm->values[i] < PWM_LOWEST_MIN) {
+					_disarmed_pwm[i] = PWM_LOWEST_MIN;
+
+				} else {
+					_disarmed_pwm[i] = pwm->values[i];
+				}
+			}
+
+			/*
+			 * update the counter
+			 * this is needed to decide if disarmed PWM output should be turned on or not
+			 */
+			_num_disarmed_set = 0;
+
+			for (unsigned i = 0; i < _max_actuators; i++) {
+				if (_disarmed_pwm[i] > 0)
+					_num_disarmed_set++;
+			}
+
 			break;
 		}
-		for (unsigned i = 0; i < pwm->channel_count; i++) {
-			if (pwm->values[i] == 0) {
-				/* ignore 0 */
-			} else if (pwm->values[i] > PWM_HIGHEST_MAX) {
-				_disarmed_pwm[i] = PWM_HIGHEST_MAX;
-			} else if (pwm->values[i] < PWM_LOWEST_MIN) {
-				_disarmed_pwm[i] = PWM_LOWEST_MIN;
-			} else {
-				_disarmed_pwm[i] = pwm->values[i];
-			}
-		}
 
-		/*
-		 * update the counter
-		 * this is needed to decide if disarmed PWM output should be turned on or not
-		 */
-		_num_disarmed_set = 0;
-		for (unsigned i = 0; i < _max_actuators; i++) {
-			if (_disarmed_pwm[i] > 0)
-				_num_disarmed_set++;
-		}
-		break;
-	}
 	case PWM_SERVO_GET_DISARMED_PWM: {
-		struct pwm_output_values *pwm = (struct pwm_output_values*)arg;
-		for (unsigned i = 0; i < _max_actuators; i++) {
-			pwm->values[i] = _disarmed_pwm[i];
+			struct pwm_output_values *pwm = (struct pwm_output_values *)arg;
+
+			for (unsigned i = 0; i < _max_actuators; i++) {
+				pwm->values[i] = _disarmed_pwm[i];
+			}
+
+			pwm->channel_count = _max_actuators;
+			break;
 		}
-		pwm->channel_count = _max_actuators;
-		break;
-	}
 
 	case PWM_SERVO_SET_MIN_PWM: {
-		struct pwm_output_values* pwm = (struct pwm_output_values*)arg;
-		/* discard if too many values are sent */
-		if (pwm->channel_count > _max_actuators) {
-			ret = -EINVAL;
+			struct pwm_output_values *pwm = (struct pwm_output_values *)arg;
+
+			/* discard if too many values are sent */
+			if (pwm->channel_count > _max_actuators) {
+				ret = -EINVAL;
+				break;
+			}
+
+			for (unsigned i = 0; i < pwm->channel_count; i++) {
+				if (pwm->values[i] == 0) {
+					/* ignore 0 */
+				} else if (pwm->values[i] > PWM_HIGHEST_MIN) {
+					_min_pwm[i] = PWM_HIGHEST_MIN;
+
+				} else if (pwm->values[i] < PWM_LOWEST_MIN) {
+					_min_pwm[i] = PWM_LOWEST_MIN;
+
+				} else {
+					_min_pwm[i] = pwm->values[i];
+				}
+			}
+
 			break;
 		}
-		for (unsigned i = 0; i < pwm->channel_count; i++) {
-			if (pwm->values[i] == 0) {
-				/* ignore 0 */
-			} else if (pwm->values[i] > PWM_HIGHEST_MIN) {
-				_min_pwm[i] = PWM_HIGHEST_MIN;
-			} else if (pwm->values[i] < PWM_LOWEST_MIN) {
-				_min_pwm[i] = PWM_LOWEST_MIN;
-			} else {
-				_min_pwm[i] = pwm->values[i];
-			}
-		}
-		break;
-	}
+
 	case PWM_SERVO_GET_MIN_PWM: {
-		struct pwm_output_values *pwm = (struct pwm_output_values*)arg;
-		for (unsigned i = 0; i < _max_actuators; i++) {
-			pwm->values[i] = _min_pwm[i];
-		}
-		pwm->channel_count = _max_actuators;
-		arg = (unsigned long)&pwm;
-		break;
+			struct pwm_output_values *pwm = (struct pwm_output_values *)arg;
+
+			for (unsigned i = 0; i < _max_actuators; i++) {
+				pwm->values[i] = _min_pwm[i];
+			}
+
+			pwm->channel_count = _max_actuators;
+			arg = (unsigned long)&pwm;
+			break;
 	}
 
 	case PWM_SERVO_SET_MAX_PWM: {
-		struct pwm_output_values* pwm = (struct pwm_output_values*)arg;
-		/* discard if too many values are sent */
-		if (pwm->channel_count > _max_actuators) {
-			ret = -EINVAL;
+			struct pwm_output_values *pwm = (struct pwm_output_values *)arg;
+
+			/* discard if too many values are sent */
+			if (pwm->channel_count > _max_actuators) {
+				ret = -EINVAL;
+				break;
+			}
+
+			for (unsigned i = 0; i < pwm->channel_count; i++) {
+				if (pwm->values[i] == 0) {
+					/* ignore 0 */
+				} else if (pwm->values[i] < PWM_LOWEST_MAX) {
+					_max_pwm[i] = PWM_LOWEST_MAX;
+
+				} else if (pwm->values[i] > PWM_HIGHEST_MAX) {
+					_max_pwm[i] = PWM_HIGHEST_MAX;
+
+				} else {
+					_max_pwm[i] = pwm->values[i];
+				}
+			}
+
 			break;
 		}
-		for (unsigned i = 0; i < pwm->channel_count; i++) {
-			if (pwm->values[i] == 0) {
-				/* ignore 0 */
-			} else if (pwm->values[i] < PWM_LOWEST_MAX) {
-				_max_pwm[i] = PWM_LOWEST_MAX;
-			} else if (pwm->values[i] > PWM_HIGHEST_MAX) {
-				_max_pwm[i] = PWM_HIGHEST_MAX;
-			} else {
-				_max_pwm[i] = pwm->values[i];
-			}
-		}
-		break;
-	}
+
 	case PWM_SERVO_GET_MAX_PWM: {
-		struct pwm_output_values *pwm = (struct pwm_output_values*)arg;
-		for (unsigned i = 0; i < _max_actuators; i++) {
-			pwm->values[i] = _max_pwm[i];
+			struct pwm_output_values *pwm = (struct pwm_output_values *)arg;
+
+			for (unsigned i = 0; i < _max_actuators; i++) {
+				pwm->values[i] = _max_pwm[i];
+			}
+
+			pwm->channel_count = _max_actuators;
+			arg = (unsigned long)&pwm;
+			break;
 		}
-		pwm->channel_count = _max_actuators;
-		arg = (unsigned long)&pwm;
-		break;
-	}
 
     case PWM_SERVO_SET(11):
     case PWM_SERVO_SET(10):
@@ -935,6 +976,7 @@ TMRFC::pwm_ioctl(file *filp, int cmd, unsigned long arg)
     case PWM_SERVO_SET(0):
 		if (arg <= 2100) {
             up_pwm_servo_set(cmd - PWM_SERVO_SET(0), arg);
+
         } else {
             ret = -EINVAL;
         }
@@ -1049,6 +1091,7 @@ TMRFC::pwm_ioctl(file *filp, int cmd, unsigned long arg)
                     ret = -EINVAL;
                 }
             }
+
             break;
         }
 
@@ -1083,8 +1126,16 @@ TMRFC::write(file *filp, const char *buffer, size_t len)
     for (uint8_t i = 0; i < count; i++) {
         up_pwm_servo_set(i, values[i]);
     }
+
     return count * 2;
 }
+
+void
+TMRFC::sensor_reset(int ms)
+{
+
+}
+
 
 void
 TMRFC::gpio_reset(void)
@@ -1113,6 +1164,7 @@ TMRFC::gpio_set_function(uint32_t gpios, int function)
 {
 #if 0
     #if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
+
     /*
      * GPIOs 0 and 1 must have the same direction as they are buffered
      * by a shared 2-port driver.  Any attempt to set either sets both.
@@ -1124,6 +1176,7 @@ TMRFC::gpio_set_function(uint32_t gpios, int function)
         if (GPIO_SET_OUTPUT == function)
             stm32_gpiowrite(GPIO_GPIO_DIR, 1);
     }
+
     #endif
 
     /* configure selected GPIOs as required */
@@ -1148,6 +1201,7 @@ TMRFC::gpio_set_function(uint32_t gpios, int function)
     }
 
     #if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
+
     /* flip buffer to input mode if required */
     if ((GPIO_SET_INPUT == function) && (gpios & 3))
         stm32_gpiowrite(GPIO_GPIO_DIR, 0);
@@ -1192,6 +1246,10 @@ TMRFC::gpio_ioctl(struct file *filp, int cmd, unsigned long arg)
 
     case GPIO_RESET:
         gpio_reset();
+		break;
+
+	case GPIO_SENSOR_RAIL_RESET:
+		sensor_reset(arg);
         break;
 
     case GPIO_SET_OUTPUT:
@@ -1288,6 +1346,9 @@ fc_new_mode(PortMode new_mode)
         /* select 2-pin PWM mode */
         servo_mode = TMRFC::MODE_2PWM;
         break;
+
+	default:
+		return -1;
     }
 
     /* adjust GPIO config for serial mode(s) */
@@ -1341,6 +1402,22 @@ fc_stop(void)
 }
 
 void
+sensor_reset(int ms)
+{
+	int	 fd;
+	int	 ret;
+
+	fd = open(TMRFC_DEVICE_PATH, O_RDWR);
+
+	if (fd < 0)
+		errx(1, "open fail");
+
+	if (ioctl(fd, GPIO_SENSOR_RAIL_RESET, ms) < 0)
+		err(1, "servo arm failed");
+
+}
+
+void
 test(void)
 {
 	int	 fd;
@@ -1371,6 +1448,7 @@ test(void)
     for (;;) {
         /* sweep all servos between 1000..2000 */
         servo_position_t servos[servo_count];
+
         for (unsigned i = 0; i < servo_count; i++)
             servos[i] = pwm_value;
 
@@ -1381,9 +1459,11 @@ test(void)
                             err(1, "servo %u set failed", i);
                         }
                     }
+
                 } else {
                     // and use write interface for the other direction
                     ret = write(fd, servos, sizeof(servos));
+
                     if (ret != (int)sizeof(servos))
             err(1, "error writing PWM servo data, wrote %u got %d", sizeof(servos), ret);
                 }
@@ -1391,12 +1471,15 @@ test(void)
         if (direction > 0) {
             if (pwm_value < 2000) {
                 pwm_value++;
+
             } else {
                 direction = -1;
             }
+
         } else {
             if (pwm_value > 1000) {
                 pwm_value--;
+
             } else {
                 direction = 1;
             }
@@ -1408,6 +1491,7 @@ test(void)
 
             if (ioctl(fd, PWM_SERVO_GET(i), (unsigned long)&value))
                 err(1, "error reading PWM servo %d", i);
+
             if (value != servos[i])
                 errx(1, "servo %d readback error, got %u expected %u", i, value, servos[i]);
         }
@@ -1415,9 +1499,11 @@ test(void)
 		/* Check if user wants to quit */
 		char c;
 		ret = poll(&fds, 1, 0);
+
 		if (ret > 0) {
 
 			read(0, &c, 1);
+
 			if (c == 0x03 || c == 0x63 || c == 'q') {
 				warnx("User abort\n");
                                 break;
@@ -1523,7 +1609,20 @@ fc_main(int argc, char *argv[])
     if (!strcmp(verb, "fake"))
         fake(argc - 1, argv + 1);
 
+	if (!strcmp(verb, "sensor_reset")) {
+		if (argc > 2) {
+			int reset_time = strtol(argv[2], 0, 0);
+			sensor_reset(reset_time);
+
+		} else {
+			sensor_reset(0);
+			warnx("resettet default time");
+		}
+		exit(0);
+	}
+
+
     fprintf(stderr, "FC: unrecognised command, try:\n");
-    fprintf(stderr, "  mode_gpio, mode_serial, mode_pwm, mode_gpio_serial, mode_pwm_serial, mode_pwm_gpio\n");
+	fprintf(stderr, "  mode_gpio, mode_serial, mode_pwm, mode_gpio_serial, mode_pwm_serial, mode_pwm_gpio, test\n");
     exit(1);
 }

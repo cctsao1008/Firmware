@@ -15,6 +15,7 @@ fi
 if mpu6050 start
 then
 	echo "[MPU6050] Ready."
+	set BOARD fcv1
 	
 	if hmc5883 start
 	then

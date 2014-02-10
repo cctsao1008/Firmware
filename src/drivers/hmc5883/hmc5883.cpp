@@ -1284,28 +1284,20 @@ start()
         /* if already started, the still command succeeded */
         errx(0, "already started");
 
+    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+    g_dev = new HMC5883(TMR_I2C_BUS_ONBOARD);
+	if (g_dev != nullptr && OK != g_dev->init()) {
+		delete g_dev;
+		g_dev = nullptr;
+	}
+    #else
     /* create the driver, attempt expansion bus first */
-    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
-    g_dev = new HMC5883(TMR_I2C_BUS_EXPANSION);
-    #else
     g_dev = new HMC5883(PX4_I2C_BUS_EXPANSION);
-    #endif
-    if (g_dev != nullptr && OK != g_dev->init()) {
-        delete g_dev;
-        g_dev = nullptr;
-    }
-
-    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
-    #ifdef TMR_I2C_BUS_ONBOARD
-    /* if this failed, attempt onboard sensor */
-    if (g_dev == nullptr) {
-        g_dev = new HMC5883(TMR_I2C_BUS_ONBOARD);
-        if (g_dev != nullptr && OK != g_dev->init()) {
-            goto fail;
-        }
-    }
-    #endif
-    #else
+	if (g_dev != nullptr && OK != g_dev->init()) {
+		delete g_dev;
+		g_dev = nullptr;
+	}
+			
     #ifdef PX4_I2C_BUS_ONBOARD
     /* if this failed, attempt onboard sensor */
     if (g_dev == nullptr) {
@@ -1315,6 +1307,7 @@ start()
         }
     }
     #endif
+    
     #endif
 
     if (g_dev == nullptr)
