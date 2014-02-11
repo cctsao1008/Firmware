@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2012, 2013 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2012-2014 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -387,16 +387,6 @@ HMC5883::init()
     reset();
 
 	_class_instance = register_class_devname(MAG_DEVICE_PATH);
-	if (_class_instance == CLASS_DEVICE_PRIMARY) {
-		/* get a publish handle on the mag topic if we are
-		 * the primary mag */
-		struct mag_report zero_report;
-		memset(&zero_report, 0, sizeof(zero_report));
-		_mag_topic = orb_advertise(ORB_ID(sensor_mag), &zero_report);
-
-		if (_mag_topic < 0)
-			debug("failed to create sensor_mag object");
-	}
 
     ret = OK;
     /* sensor is ok, but not calibrated */
@@ -867,21 +857,6 @@ HMC5883::collect()
 
     /* scale values for output */
 
-    /*
-     * 1) Scale raw value to SI units using scaling from datasheet.
-     * 2) Subtract static offset (in SI units)
-     * 3) Scale the statically calibrated values with a linear
-     *    dynamically obtained factor
-     *
-     * Note: the static sensor offset is the number the sensor outputs
-     *   at a nominally 'zero' input. Therefore the offset has to
-     *   be subtracted.
-     *
-     *   Example: A gyro outputs a value of 74 at zero angular rate
-     *        the offset is 74 from the origin and subtracting
-     *        74 from all measurements centers them around zero.
-     */
-
 #if defined(CONFIG_ARCH_BOARD_TMRFC_V1) /* TMRFC V1.x */
         new_report.x = ((report.y * _range_scale) - _scale.x_offset) * _scale.x_scale;
         new_report.y = ((-report.x * _range_scale) - _scale.y_offset) * _scale.y_scale;
@@ -911,12 +886,26 @@ HMC5883::collect()
 
 #endif
 
-    /* publish it */
-    orb_publish(ORB_ID(sensor_mag), _mag_topic, &new_report);
+	/* the standard external mag by 3DR has x pointing to the
+	 * right, y pointing backwards, and z down, therefore switch x
+	 * and y and invert y */
+	new_report.x = ((-report.y * _range_scale) - _scale.x_offset) * _scale.x_scale;
+	/* flip axes and negate value for y */
+	new_report.y = ((report.x * _range_scale) - _scale.y_offset) * _scale.y_scale;
+	/* z remains z */
+	new_report.z = ((report.z * _range_scale) - _scale.z_offset) * _scale.z_scale;
 
-	if (_mag_topic != -1) {
-		/* publish it */
-		orb_publish(ORB_ID(sensor_mag), _mag_topic, &new_report);
+	if (_class_instance == CLASS_DEVICE_PRIMARY && !(_pub_blocked)) {
+
+		if (_mag_topic != -1) {
+			/* publish it */
+			orb_publish(ORB_ID(sensor_mag), _mag_topic, &new_report);
+		} else {
+			_mag_topic = orb_advertise(ORB_ID(sensor_mag), &new_report);
+
+			if (_mag_topic < 0)
+				debug("failed to create sensor_mag publication");
+		}
 	}
 
     /* post a report to the ring */
@@ -939,6 +928,7 @@ int HMC5883::calibrate(struct file *filp, unsigned enable)
     struct mag_report report;
     ssize_t sz;
     int ret = 1;
+	uint8_t good_count = 0;
 
     // XXX do something smarter here
     int fd = (int)enable;
@@ -961,32 +951,19 @@ int HMC5883::calibrate(struct file *filp, unsigned enable)
         1.0f,
     };
 
-    float avg_excited[3] = {0.0f, 0.0f, 0.0f};
-    unsigned i;
+	float sum_excited[3] = {0.0f, 0.0f, 0.0f};
 
-    warnx("starting mag scale calibration");
+	/* expected axis scaling. The datasheet says that 766 will
+	 * be places in the X and Y axes and 713 in the Z
+	 * axis. Experiments show that in fact 766 is placed in X,
+	 * and 713 in Y and Z. This is relative to a base of 660
+	 * LSM/Ga, giving 1.16 and 1.08 */
+	float expected_cal[3] = { 1.16f, 1.08f, 1.08f };
 
-    /* do a simple demand read */
-    sz = read(filp, (char *)&report, sizeof(report));
+	warnx("starting mag scale calibration");
 
-    if (sz != sizeof(report)) {
-        warn("immediate read failed");
-        ret = 1;
-        goto out;
-    }
-
-    warnx("current measurement: %.6f  %.6f  %.6f", (double)report.x, (double)report.y, (double)report.z);
-    warnx("time:        %lld", report.timestamp);
-    warnx("sampling 500 samples for scaling offset");
-
-    /* set the queue depth to 10 */
-    /* don't do this for now, it can lead to a crash in start() respectively work_queue() */
-//  if (OK != ioctl(filp, SENSORIOCSQUEUEDEPTH, 10)) {
-//      warn("failed to set queue depth");
-//      ret = 1;
-//      goto out;
-//  }
-
+	/* start the sensor polling at 50 Hz */
+	if (OK != ioctl(filp, SENSORIOCSPOLLRATE, 50)) {
     /* start the sensor polling at 50 Hz */
     if (OK != ioctl(filp, SENSORIOCSPOLLRATE, 50)) {
         warn("failed to set 2Hz poll rate");
@@ -994,13 +971,15 @@ int HMC5883::calibrate(struct file *filp, unsigned enable)
         goto out;
     }
 
-    /* Set to 2.5 Gauss */
-    if (OK != ioctl(filp, MAGIOCSRANGE, 3)) {
-        warnx("failed to set 2.5 Ga range");
-        ret = 1;
-        goto out;
-    }
+	/* Set to 2.5 Gauss. We ask for 3 to get the right part of
+         * the chained if statement above. */
+	if (OK != ioctl(filp, MAGIOCSRANGE, 3)) {
+		warnx("failed to set 2.5 Ga range");
+		ret = 1;
+		goto out;
+	}
 
+	if (OK != ioctl(filp, MAGIOCEXSTRAP, 1)) {
     if (OK != ioctl(filp, MAGIOCEXSTRAP, 1)) {
         warnx("failed to enable sensor calibration mode");
         ret = 1;
@@ -1019,10 +998,13 @@ int HMC5883::calibrate(struct file *filp, unsigned enable)
         goto out;
     }
 
-    /* read the sensor 10x and report each value */
-    for (i = 0; i < 500; i++) {
-        struct pollfd fds;
+	// discard 10 samples to let the sensor settle
+	for (uint8_t i = 0; i < 10; i++) {
+		struct pollfd fds;
 
+		/* wait for data to be ready */
+		fds.fd = fd;
+		fds.events = POLLIN;
         /* wait for data to be ready */
         fds.fd = fd;
         fds.events = POLLIN;
@@ -1036,36 +1018,73 @@ int HMC5883::calibrate(struct file *filp, unsigned enable)
         /* now go get it */
         sz = ::read(fd, &report, sizeof(report));
 
-        if (sz != sizeof(report)) {
-            warn("periodic read failed");
-            goto out;
+		if (sz != sizeof(report)) {
+			warn("periodic read failed");
+			ret = -EIO;
+			goto out;
+		}
+	}
 
-        } else {
-            avg_excited[0] += report.x;
-            avg_excited[1] += report.y;
-            avg_excited[2] += report.z;
-        }
+	/* read the sensor up to 50x, stopping when we have 10 good values */
+	for (uint8_t i = 0; i < 50 && good_count < 10; i++) {
+		struct pollfd fds;
 
-        //warnx("periodic read %u", i);
-        //warnx("measurement: %.6f  %.6f  %.6f", (double)report.x, (double)report.y, (double)report.z);
-    }
+		/* wait for data to be ready */
+		fds.fd = fd;
+		fds.events = POLLIN;
+		ret = ::poll(&fds, 1, 2000);
 
-    avg_excited[0] /= i;
-    avg_excited[1] /= i;
-    avg_excited[2] /= i;
+		if (ret != 1) {
+			warn("timed out waiting for sensor data");
+			goto out;
+		}
 
-    warnx("done. Performed %u reads", i);
-    warnx("measurement avg: %.6f  %.6f  %.6f", (double)avg_excited[0], (double)avg_excited[1], (double)avg_excited[2]);
+		/* now go get it */
+		sz = ::read(fd, &report, sizeof(report));
+
+		if (sz != sizeof(report)) {
+			warn("periodic read failed");
+			ret = -EIO;
+			goto out;
+		}
+		float cal[3] = {fabsf(expected_cal[0] / report.x), 
+				fabsf(expected_cal[1] / report.y), 
+				fabsf(expected_cal[2] / report.z)};
+
+		if (cal[0] > 0.7f && cal[0] < 1.35f &&
+		    cal[1] > 0.7f && cal[1] < 1.35f &&
+		    cal[2] > 0.7f && cal[2] < 1.35f) {
+			good_count++;
+			sum_excited[0] += cal[0];
+			sum_excited[1] += cal[1];
+			sum_excited[2] += cal[2];
+		}
+
+		//warnx("periodic read %u", i);
+		//warnx("measurement: %.6f  %.6f  %.6f", (double)report.x, (double)report.y, (double)report.z);
+		//warnx("cal: %.6f  %.6f  %.6f", (double)cal[0], (double)cal[1], (double)cal[2]);
+	}
+
+	if (good_count < 5) {
+		warn("failed calibration");
+		ret = -EIO;
+		goto out;
+	}
+
+#if 0
+	warnx("measurement avg: %.6f  %.6f  %.6f", 
+	      (double)sum_excited[0]/good_count, 
+	      (double)sum_excited[1]/good_count, 
+	      (double)sum_excited[2]/good_count);
+#endif
 
     float scaling[3];
 
-    /* calculate axis scaling */
-    scaling[0] = fabsf(1.16f / avg_excited[0]);
-    /* second axis inverted */
-    scaling[1] = fabsf(1.16f / -avg_excited[1]);
-    scaling[2] = fabsf(1.08f / avg_excited[2]);
+	scaling[0] = sum_excited[0] / good_count;
+	scaling[1] = sum_excited[1] / good_count;
+	scaling[2] = sum_excited[2] / good_count;
 
-    warnx("axes scaling: %.6f  %.6f  %.6f", (double)scaling[0], (double)scaling[1], (double)scaling[2]);
+	warnx("axes scaling: %.6f  %.6f  %.6f", (double)scaling[0], (double)scaling[1], (double)scaling[2]);
 
     #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
     /* set back to normal mode */
@@ -1172,12 +1191,14 @@ int HMC5883::check_calibration()
             SUBSYSTEM_TYPE_MAG};
         static orb_advert_t pub = -1;
 
-        if (pub > 0) {
-            orb_publish(ORB_ID(subsystem_info), pub, &info);
-        } else {
-            pub = orb_advertise(ORB_ID(subsystem_info), &info);
-        }
-    }
+		if (!(_pub_blocked)) {
+			if (pub > 0) {
+				orb_publish(ORB_ID(subsystem_info), pub, &info);
+			} else {
+				pub = orb_advertise(ORB_ID(subsystem_info), &info);
+			}
+		}
+	}
 
     /* return 0 if calibrated, 1 else */
     return (!_calibrated);
@@ -1201,17 +1222,20 @@ int HMC5883::set_excitement(unsigned enable)
 
     } else {
         conf_reg &= ~0x03;
-    }
 
-    ret = write_reg(ADDR_CONF_A, conf_reg);
+        // ::printf("set_excitement enable=%d regA=0x%x\n", (int)enable, (unsigned)conf_reg);
 
+	ret = write_reg(ADDR_CONF_A, conf_reg);
+
+	if (OK != ret)
+		perf_count(_comms_errors);
     if (OK != ret)
         perf_count(_comms_errors);
 
-    uint8_t conf_reg_ret;
-    read_reg(ADDR_CONF_A, conf_reg_ret);
 
-    return !(conf_reg == conf_reg_ret);
+	//print_info();
+
+	return !(conf_reg == conf_reg_ret);
 }
 
 int
@@ -1245,11 +1269,15 @@ HMC5883::meas_to_float(uint8_t in[2])
 void
 HMC5883::print_info()
 {
-    perf_print_counter(_sample_perf);
-    perf_print_counter(_comms_errors);
-    perf_print_counter(_buffer_overflows);
-    printf("poll interval:  %u ticks\n", _measure_ticks);
-    _reports->print_info("report queue");
+	perf_print_counter(_sample_perf);
+	perf_print_counter(_comms_errors);
+	perf_print_counter(_buffer_overflows);
+	printf("poll interval:  %u ticks\n", _measure_ticks);
+	printf("offsets (%.2f %.2f %.2f)\n", (double)_scale.x_offset, (double)_scale.y_offset, (double)_scale.z_offset);
+	printf("scaling (%.2f %.2f %.2f) 1/range_scale %.2f range_ga %.2f\n", 
+	       (double)_scale.x_scale, (double)_scale.y_scale, (double)_scale.z_scale,
+	       (double)1.0/_range_scale, (double)_range_ga);
+	_reports->print_info("report queue");
 }
 
 /**

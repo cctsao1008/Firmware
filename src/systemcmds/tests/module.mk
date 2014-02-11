@@ -27,7 +27,11 @@ SRCS			 = test_adc.c \
 			   tests_main.c \
 			   test_param.c \
 			   test_ppm_loopback.c \
-			   test_rc.c
+			   test_rc.c \
+			   test_conv.cpp \
+			   test_mount.c \
+			   test_mtd.c
+
 ifeq ($(CONFIG_BOARD),PX4FMU_V1)
 SRCS		   += test_gpio.c
-endif
+endi
