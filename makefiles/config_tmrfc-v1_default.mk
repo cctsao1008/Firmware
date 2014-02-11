@@ -27,7 +27,6 @@ MODULES		+= drivers/stm32/tone_alarm
 #MODULES	+= drivers/px4io
 #MODULES	+= drivers/px4fmu
 MODULES		+= drivers/tmrfc
-#MODULES	+= drivers/boards/px4fmu-v1
 MODULES		+= drivers/boards/tmrfc-v1
 #MODULES	+= drivers/ardrone_interface
 #MODULES	+= drivers/l3gd20
@@ -46,17 +45,18 @@ MODULES		+= drivers/hil
 #MODULES	+= drivers/blinkm
 #MODULES	+= drivers/rgbled
 #MODULES	+= drivers/mkblctrl
-#MODULES	+= drivers/roboclaw
 MODULES		+= drivers/airspeed
 MODULES		+= drivers/ets_airspeed
 MODULES		+= drivers/meas_airspeed
+#MODULES	+= drivers/frsky_telemetry
 MODULES		+= modules/sensors
 
 #
 # System commands
 #
-MODULES		+= systemcmds/eeprom
-MODULES		+= systemcmds/ramtron
+#MODULES	+= systemcmds/eeprom
+#MODULES	+= systemcmds/ramtron
+#MODULES	+= systemcmds/mtd
 MODULES		+= systemcmds/bl_update
 MODULES		+= systemcmds/boardinfo
 MODULES		+= systemcmds/i2c
@@ -71,6 +71,7 @@ MODULES		+= systemcmds/top
 MODULES		+= systemcmds/tests
 MODULES		+= systemcmds/config
 MODULES		+= systemcmds/nshterm
+MODULES		+= systemcmds/hw_ver
 
 #
 # General system control
@@ -93,7 +94,6 @@ MODULES		+= examples/flow_position_estimator
 #
 # Vehicle Control
 #
-#MODULES	+= modules/segway # XXX Needs GCC 4.7 fix
 MODULES		+= modules/fw_pos_control_l1
 MODULES		+= modules/fw_att_control
 MODULES		+= modules/multirotor_att_control

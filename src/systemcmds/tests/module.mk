@@ -34,4 +34,4 @@ SRCS			 = test_adc.c \
 
 ifeq ($(CONFIG_BOARD),PX4FMU_V1)
 SRCS		   += test_gpio.c
-endi
+endif

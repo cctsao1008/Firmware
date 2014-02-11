@@ -1,5 +1,5 @@
 ############################################################################
-# nuttx-configs/tmrfc-v1/nsh/Make.defs
+# configs/tmrfc-v1/nsh/Make.defs
 #
 #   Copyright (C) 2011 Gregory Nutt. All rights reserved.
 #   Author: Gregory Nutt <gnutt@nuttx.org>

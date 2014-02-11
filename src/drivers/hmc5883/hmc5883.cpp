@@ -839,7 +839,7 @@ HMC5883::collect()
     }
 
     #if defined(CONFIG_ARCH_BOARD_TMRFC_V1) /* TMRFC V1.x */
-    new_report.x_raw = report.y;
+    new_report.x_raw =  report.y;
     new_report.y_raw = -report.x;
     new_report.z_raw = -report.z;
     #else
@@ -855,36 +855,22 @@ HMC5883::collect()
     new_report.z_raw = report.z;
     #endif
 
-    /* scale values for output */
+	/* scale values for output */
 
 #if defined(CONFIG_ARCH_BOARD_TMRFC_V1) /* TMRFC V1.x */
-        new_report.x = ((report.y * _range_scale) - _scale.x_offset) * _scale.x_scale;
+        new_report.x = (( report.y * _range_scale) - _scale.x_offset) * _scale.x_scale;
         new_report.y = ((-report.x * _range_scale) - _scale.y_offset) * _scale.y_scale;
         new_report.z = ((-report.z * _range_scale) - _scale.z_offset) * _scale.z_scale;
-#else /* PX4FMU V1.x */
+#else
 
     #ifdef PX4_I2C_BUS_ONBOARD
-    if (_bus == PX4_I2C_BUS_ONBOARD) {
-        /* to align the sensor axes with the board, x and y need to be flipped */
-        new_report.x = ((report.y * _range_scale) - _scale.x_offset) * _scale.x_scale;
-        /* flip axes and negate value for y */
-        new_report.y = ((-report.x * _range_scale) - _scale.y_offset) * _scale.y_scale;
-        /* z remains z */
-        new_report.z = ((report.z * _range_scale) - _scale.z_offset) * _scale.z_scale;
-    } else {
+	if (_bus == PX4_I2C_BUS_ONBOARD) {
+		// convert onboard so it matches offboard for the
+		// scaling below
+		report.y = -report.y;
+		report.x = -report.x;
+        }
     #endif
-        /* the standard external mag by 3DR has x pointing to the right, y pointing backwards, and z down,
-         * therefore switch x and y and invert y */
-        new_report.x = ((-report.y * _range_scale) - _scale.x_offset) * _scale.x_scale;
-        /* flip axes and negate value for y */
-        new_report.y = ((report.x * _range_scale) - _scale.y_offset) * _scale.y_scale;
-        /* z remains z */
-        new_report.z = ((report.z * _range_scale) - _scale.z_offset) * _scale.z_scale;
-    #ifdef PX4_I2C_BUS_ONBOARD
-    }
-    #endif
-
-#endif
 
 	/* the standard external mag by 3DR has x pointing to the
 	 * right, y pointing backwards, and z down, therefore switch x
@@ -894,6 +880,7 @@ HMC5883::collect()
 	new_report.y = ((report.x * _range_scale) - _scale.y_offset) * _scale.y_scale;
 	/* z remains z */
 	new_report.z = ((report.z * _range_scale) - _scale.z_offset) * _scale.z_scale;
+#endif
 
 	if (_class_instance == CLASS_DEVICE_PRIMARY && !(_pub_blocked)) {
 
@@ -964,11 +951,9 @@ int HMC5883::calibrate(struct file *filp, unsigned enable)
 
 	/* start the sensor polling at 50 Hz */
 	if (OK != ioctl(filp, SENSORIOCSPOLLRATE, 50)) {
-    /* start the sensor polling at 50 Hz */
-    if (OK != ioctl(filp, SENSORIOCSPOLLRATE, 50)) {
-        warn("failed to set 2Hz poll rate");
-        ret = 1;
-        goto out;
+		warn("failed to set 2Hz poll rate");
+		ret = 1;
+		goto out;
     }
 
 	/* Set to 2.5 Gauss. We ask for 3 to get the right part of
@@ -980,7 +965,6 @@ int HMC5883::calibrate(struct file *filp, unsigned enable)
 	}
 
 	if (OK != ioctl(filp, MAGIOCEXSTRAP, 1)) {
-    if (OK != ioctl(filp, MAGIOCEXSTRAP, 1)) {
         warnx("failed to enable sensor calibration mode");
         ret = 1;
         goto out;
@@ -1005,12 +989,9 @@ int HMC5883::calibrate(struct file *filp, unsigned enable)
 		/* wait for data to be ready */
 		fds.fd = fd;
 		fds.events = POLLIN;
-        /* wait for data to be ready */
-        fds.fd = fd;
-        fds.events = POLLIN;
-        ret = ::poll(&fds, 1, 2000);
+		ret = ::poll(&fds, 1, 2000);
 
-        if (ret != 1) {
+		if (ret != 1) {
             warn("timed out waiting for sensor data");
             goto out;
         }
@@ -1220,8 +1201,9 @@ int HMC5883::set_excitement(unsigned enable)
     } else if (enable > 0) {
         conf_reg |= 0x02;
 
-    } else {
-        conf_reg &= ~0x03;
+	} else {
+		conf_reg &= ~0x03;
+	}
 
         // ::printf("set_excitement enable=%d regA=0x%x\n", (int)enable, (unsigned)conf_reg);
 
@@ -1229,9 +1211,9 @@ int HMC5883::set_excitement(unsigned enable)
 
 	if (OK != ret)
 		perf_count(_comms_errors);
-    if (OK != ret)
-        perf_count(_comms_errors);
 
+	uint8_t conf_reg_ret;
+	read_reg(ADDR_CONF_A, conf_reg_ret);
 
 	//print_info();
 
@@ -1312,13 +1294,14 @@ start()
         /* if already started, the still command succeeded */
         errx(0, "already started");
 
-    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+#if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
     g_dev = new HMC5883(TMR_I2C_BUS_ONBOARD);
 	if (g_dev != nullptr && OK != g_dev->init()) {
 		delete g_dev;
 		g_dev = nullptr;
 	}
-    #else
+#else
+
     /* create the driver, attempt expansion bus first */
     g_dev = new HMC5883(PX4_I2C_BUS_EXPANSION);
 	if (g_dev != nullptr && OK != g_dev->init()) {
@@ -1326,6 +1309,7 @@ start()
 		g_dev = nullptr;
 	}
 			
+
     #ifdef PX4_I2C_BUS_ONBOARD
     /* if this failed, attempt onboard sensor */
     if (g_dev == nullptr) {
@@ -1336,7 +1320,7 @@ start()
     }
     #endif
     
-    #endif
+#endif
 
     if (g_dev == nullptr)
         goto fail;

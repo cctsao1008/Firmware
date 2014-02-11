@@ -92,7 +92,7 @@ struct sensor_combined_s {
 	int16_t	magnetometer_raw[3];		/**< Raw magnetic field in NED body frame         */
 	float magnetometer_ga[3];		/**< Magnetic field in NED body frame, in Gauss   */
 	int magnetometer_mode;			/**< Magnetometer measurement mode */
-	float magnetometer_range_ga;		/**< ¡Ó measurement range in Gauss */
+	float magnetometer_range_ga;		/**< Â± measurement range in Gauss */
 	float magnetometer_cuttoff_freq_hz;	/**< Internal analog low pass frequency of sensor */
 	uint32_t magnetometer_counter;		/**< Number of raw mag measurements taken         */
 	

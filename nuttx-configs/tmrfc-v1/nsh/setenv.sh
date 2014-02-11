@@ -1,5 +1,5 @@
 #!/bin/bash
-# nuttx-configs/tmrfc-v1/usbnsh/setenv.sh
+# configs/tmrfc-v1/usbnsh/setenv.sh
 #
 #   Copyright (C) 2013 Gregory Nutt. All rights reserved.
 #   Author: Gregory Nutt <gnutt@nuttx.org>

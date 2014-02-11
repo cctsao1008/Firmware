@@ -65,6 +65,7 @@
 #include <systemlib/err.h>
 #include <systemlib/mixer/mixer.h>
 #include <systemlib/pwm_limit/pwm_limit.h>
+#include <systemlib/board_serial.h>
 #include <drivers/drv_mixer.h>
 #include <drivers/drv_rc_input.h>
 
@@ -658,7 +659,7 @@ TMRFC::task_main()
 #ifdef HRT_PPM_CHANNEL
 
 		// see if we have new PPM input data
-		if (ppm_last_valid_decode != rc_in.timestamp) {
+		if (ppm_last_valid_decode != rc_in.timestamp_last_signal) {
 			// we have a new PPM frame. Publish it.
 			rc_in.channel_count = ppm_decoded_channels;
 
@@ -670,7 +671,15 @@ TMRFC::task_main()
 				rc_in.values[i] = ppm_buffer[i];
 			}
 
-			rc_in.timestamp = ppm_last_valid_decode;
+			rc_in.timestamp_publication = ppm_last_valid_decode;
+			rc_in.timestamp_last_signal = ppm_last_valid_decode;
+
+			rc_in.rc_ppm_frame_length = ppm_frame_length;
+			rc_in.rssi = RC_INPUT_RSSI_MAX;
+			rc_in.rc_failsafe = false;
+			rc_in.rc_lost = false;
+			rc_in.rc_lost_frame_count = 0;
+			rc_in.rc_total_frame_count = 0;
 
 			/* lazily advertise on first publication */
 			if (to_input_rc == 0) {
@@ -1039,9 +1048,41 @@ TMRFC::pwm_ioctl(file *filp, int cmd, unsigned long arg)
             break;
         }
 
-        break;
+		break;
 
-    case MIXERIOCRESET:
+	case PWM_SERVO_SET_COUNT: {
+		/* change the number of outputs that are enabled for
+		 * PWM. This is used to change the split between GPIO
+		 * and PWM under control of the flight config
+		 * parameters. Note that this does not allow for
+		 * changing a set of pins to be used for serial on
+		 * FMUv1 
+		 */
+		switch (arg) {
+		case 0:
+			set_mode(MODE_NONE);
+			break;
+
+		case 2:
+			set_mode(MODE_2PWM);
+			break;
+
+		case 4:
+			set_mode(MODE_4PWM);
+			break;
+
+		case 6:
+			set_mode(MODE_6PWM);
+			break;
+
+		default:
+			ret = -EINVAL;
+			break;
+		}
+		break;
+	}
+
+	case MIXERIOCRESET:
         if (_mixers != nullptr) {
             delete _mixers;
             _mixers = nullptr;
@@ -1315,16 +1356,18 @@ fc_new_mode(PortMode new_mode)
         /* nothing more to do here */
         break;
 
-    case PORT_FULL_SERIAL:
-        #if 0
-        /* set all multi-GPIOs to serial mode */
-        gpio_bits = GPIO_MULTI_1 | GPIO_MULTI_2 | GPIO_MULTI_3 | GPIO_MULTI_4;
-        #endif
-        break;
+	case PORT_FULL_PWM:
+        /* select 12-pin PWM mode */
+		servo_mode = TMRFC::MODE_12PWM;
 
-    case PORT_FULL_PWM:
-        servo_mode = TMRFC::MODE_12PWM;
-        break;
+		break;
+
+	case PORT_FULL_SERIAL:
+    	#if 0
+		/* set all multi-GPIOs to serial mode */
+		gpio_bits = GPIO_MULTI_1 | GPIO_MULTI_2 | GPIO_MULTI_3 | GPIO_MULTI_4;
+		#endif
+		break;
 
     case PORT_GPIO_AND_SERIAL:
         #if 0
@@ -1563,6 +1606,15 @@ fc_main(int argc, char *argv[])
 	if (!strcmp(verb, "stop")) {
 		fc_stop();
 		errx(0, "FC driver stopped");
+	}
+
+	if (!strcmp(verb, "id")) {
+		char id[12];
+		(void)get_board_serial(id);
+
+		errx(0, "Board serial:\n %02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X",
+		     (unsigned)id[0], (unsigned)id[1], (unsigned)id[2], (unsigned)id[3], (unsigned)id[4], (unsigned)id[5],
+		     (unsigned)id[6], (unsigned)id[7], (unsigned)id[8], (unsigned)id[9], (unsigned)id[10], (unsigned)id[11]);
 	}
 
 

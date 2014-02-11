@@ -125,6 +125,13 @@
 #define ADC_AIRSPEED_VOLTAGE_CHANNEL	15
 #endif
 
+#ifdef CONFIG_ARCH_BOARD_TMRFC_V1
+#define ADC_BATTERY_VOLTAGE_CHANNEL   10
+#define ADC_BATTERY_CURRENT_CHANNEL   15
+//#define ADC_AIRSPEED_VOLTAGE_CHANNEL  11
+#endif
+
+
 #define BATT_V_LOWPASS 0.001f
 #define BATT_V_IGNORE_THRESHOLD 3.5f
 
@@ -227,10 +234,8 @@ private:
 
 		float gyro_offset[3];
 		float gyro_scale[3];
-        float gyro_offset[3];
-        float gyro_scale[3];
-        float mag_offset[3];
-        float mag_scale[3];
+		float mag_offset[3];
+		float mag_scale[3];
         float accel_offset[3];
         float accel_scale[3];
         float diff_pres_offset_pa;
@@ -608,17 +613,18 @@ Sensors::parameters_update()
 {
     bool rc_valid = true;
     float tmpScaleFactor = 0.0f;
-    float tmpRevFactor = 0.0f;
-    
-    /* rc values */
-    for (unsigned int i = 0; i < RC_CHANNELS_MAX; i++) {
+	float tmpRevFactor = 0.0f;
 
 	/* rc values */
 	for (unsigned int i = 0; i < _rc_max_chan_count; i++) {
 
 		param_get(_parameter_handles.min[i], &(_parameters.min[i]));
 		param_get(_parameter_handles.trim[i], &(_parameters.trim[i]));
-        tmpScaleFactor = (1.0f / ((_parameters.max[i] - _parameters.min[i]) / 2.0f) * _parameters.rev[i]);
+		param_get(_parameter_handles.max[i], &(_parameters.max[i]));
+		param_get(_parameter_handles.rev[i], &(_parameters.rev[i]));
+		param_get(_parameter_handles.dz[i], &(_parameters.dz[i]));
+
+		tmpScaleFactor = (1.0f / ((_parameters.max[i] - _parameters.min[i]) / 2.0f) * _parameters.rev[i]);
         tmpRevFactor = tmpScaleFactor * _parameters.rev[i];
         
         /* handle blowup in the scaling factor calculation */
@@ -1241,9 +1247,7 @@ Sensors::adc_poll(struct sensor_combined_s &raw)
 
 						/* announce the airspeed if needed, just publish else */
 						if (_diff_pres_pub > 0) {
-                        /* announce the airspeed if needed, just publish else */
-                        if (_diff_pres_pub > 0) {
-                            orb_publish(ORB_ID(differential_pressure), _diff_pres_pub, &_diff_pres);
+							orb_publish(ORB_ID(differential_pressure), _diff_pres_pub, &_diff_pres);
 
                         } else {
                             _diff_pres_pub = orb_advertise(ORB_ID(differential_pressure), &_diff_pres);
@@ -1274,8 +1278,9 @@ Sensors::rc_poll()
 
 	if (rc_updated) {
 		/* read low-level values from FMU or IO RC inputs (PPM, Spektrum, S.Bus) */
-        struct rc_input_values  rc_input;
+		struct rc_input_values	rc_input;
 
+		orb_copy(ORB_ID(input_rc), _rc_sub, &rc_input);
 
 		if (rc_input.rc_lost)
 			return;
@@ -1284,11 +1289,10 @@ Sensors::rc_poll()
 		struct actuator_controls_s actuator_group_3;
 
 		/* initialize to default values */
-        /* initialize to default values */
-        manual_control.roll = NAN;
-        manual_control.pitch = NAN;
-        manual_control.yaw = NAN;
-        manual_control.throttle = NAN;
+		manual_control.roll = NAN;
+		manual_control.pitch = NAN;
+		manual_control.yaw = NAN;
+		manual_control.throttle = NAN;
 
         manual_control.mode_switch = NAN;
         manual_control.return_switch = NAN;
@@ -1512,10 +1516,7 @@ Sensors::task_main()
 	/* start individual sensors */
 	accel_init();
 	gyro_init();
-    /* start individual sensors */
-    accel_init();
-    gyro_init();
-    mag_init();
+	mag_init();
     baro_init();
     adc_init();
 

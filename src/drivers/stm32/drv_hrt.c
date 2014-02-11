@@ -375,15 +375,10 @@ struct {
 		ARM,
 		ACTIVE,
 		INACTIVE
-    enum {
-        UNSYNCH = 0,
-        ARM,
-        ACTIVE,
-        INACTIVE
-    } phase;
+	} phase;
 } ppm;
 
-static void hrt_ppm_decode(uint32_t status);
+static void	hrt_ppm_decode(uint32_t status);
 
 #else
 /* disable the PPM configuration */
