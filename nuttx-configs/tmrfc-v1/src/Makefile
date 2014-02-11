@@ -1,5 +1,5 @@
 ############################################################################
-# nuttx-configs/tmrfc-v1/src/Makefile
+# configs/tmrfc-v1/src/Makefile
 #
 #   Copyright (C) 2013 Gregory Nutt. All rights reserved.
 #   Author: Gregory Nutt <gnutt@nuttx.org>

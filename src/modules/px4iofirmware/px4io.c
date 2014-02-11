@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (C) 2012 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2012-2014 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,6 +45,7 @@
 #include <string.h>
 #include <poll.h>
 #include <signal.h>
+#include <crc32.h>
 
 #include <drivers/drv_pwm_output.h>
 #include <drivers/drv_hrt.h>
@@ -117,6 +118,48 @@ show_debug_messages(void)
 	}
 }
 
+static void
+heartbeat_blink(void)
+{
+	static bool heartbeat = false;
+	LED_BLUE(heartbeat = !heartbeat);
+}
+
+static uint64_t reboot_time;
+
+/**
+   schedule a reboot in time_delta_usec microseconds
+ */
+void schedule_reboot(uint32_t time_delta_usec)
+{
+    reboot_time = hrt_absolute_time() + time_delta_usec;
+}
+
+/**
+   check for a scheduled reboot
+ */
+static void check_reboot(void)
+{
+    if (reboot_time != 0 && hrt_absolute_time() > reboot_time) {
+        up_systemreset();
+    }
+}
+
+static void
+calculate_fw_crc(void)
+{
+#define APP_SIZE_MAX 0xf000
+#define APP_LOAD_ADDRESS 0x08001000
+	// compute CRC of the current firmware
+	uint32_t sum = 0;
+	for (unsigned p = 0; p < APP_SIZE_MAX; p += 4) {
+		uint32_t bytes = *(uint32_t *)(p + APP_LOAD_ADDRESS);
+		sum = crc32part((uint8_t *)&bytes, sizeof(bytes), sum);
+	}
+	r_page_setup[PX4IO_P_SETUP_CRC]   = sum & 0xFFFF;
+	r_page_setup[PX4IO_P_SETUP_CRC+1] = sum >> 16;
+}
+
 int
 user_start(int argc, char *argv[])
 {
@@ -128,6 +171,9 @@ user_start(int argc, char *argv[])
 
 	/* configure the high-resolution time/callout interface */
 	hrt_init();
+
+	/* calculate our fw CRC so FMU can decide if we need to update */
+	calculate_fw_crc();
 
 	/*
 	 * Poll at 1ms intervals for received bytes that have not triggered
@@ -150,6 +196,11 @@ user_start(int argc, char *argv[])
 	POWER_SERVO(true);
 #endif
 
+	/* turn off S.Bus out (if supported) */
+#ifdef ENABLE_SBUS_OUT
+	ENABLE_SBUS_OUT(false);
+#endif
+
 	/* start the safety switch handler */
 	safety_init();
 
@@ -158,6 +209,9 @@ user_start(int argc, char *argv[])
 
 	/* initialise the control inputs */
 	controls_init();
+
+	/* set up the ADC */
+	adc_init();
 
 	/* start the FMU interface */
 	interface_init();
@@ -177,30 +231,48 @@ user_start(int argc, char *argv[])
 	/* initialize PWM limit lib */
 	pwm_limit_init(&pwm_limit);
 
-#if 0
-	/* not enough memory, lock down */
-	if (minfo.mxordblk < 500) {
+	/*
+	 *    P O L I C E    L I G H T S
+	 *
+	 * Not enough memory, lock down.
+	 *
+	 * We might need to allocate mixers later, and this will
+	 * ensure that a developer doing a change will notice
+	 * that he just burned the remaining RAM with static
+	 * allocations. We don't want him to be able to
+	 * get past that point. This needs to be clearly
+	 * documented in the dev guide.
+         *
+	 */
+	if (minfo.mxordblk < 600) {
+
 		lowsyslog("ERR: not enough MEM");
 		bool phase = false;
 
-		if (phase) {
-			LED_AMBER(true);
-			LED_BLUE(false);
-		} else {
-			LED_AMBER(false);
-			LED_BLUE(true);
-		}
+		while (true) {
 
-		phase = !phase;
-		usleep(300000);
+			if (phase) {
+				LED_AMBER(true);
+				LED_BLUE(false);
+			} else {
+				LED_AMBER(false);
+				LED_BLUE(true);
+			}
+			up_udelay(250000);
+
+			phase = !phase;
+		}
 	}
-#endif
+
+	/* Start the failsafe led init */
+	failsafe_led_init();
 
 	/*
 	 * Run everything in a tight loop.
 	 */
 
 	uint64_t last_debug_time = 0;
+        uint64_t last_heartbeat_time = 0;
 	for (;;) {
 
 		/* track the rate at which the loop is running */
@@ -216,11 +288,19 @@ user_start(int argc, char *argv[])
 		controls_tick();
 		perf_end(controls_perf);
 
-#if 0
-		/* check for debug activity */
+                if ((hrt_absolute_time() - last_heartbeat_time) > 250*1000) {
+                    last_heartbeat_time = hrt_absolute_time();
+                    heartbeat_blink();
+                }
+
+                check_reboot();
+
+		/* check for debug activity (default: none) */
 		show_debug_messages();
 
-		/* post debug state at ~1Hz */
+		/* post debug state at ~1Hz - this is via an auxiliary serial port
+		 * DEFAULTS TO OFF!
+		 */
 		if (hrt_absolute_time() - last_debug_time > (1000 * 1000)) {
 
 			struct mallinfo minfo = mallinfo();
@@ -233,7 +313,6 @@ user_start(int argc, char *argv[])
 				  (unsigned)minfo.mxordblk);
 			last_debug_time = hrt_absolute_time();
 		}
-#endif
 	}
 }
 

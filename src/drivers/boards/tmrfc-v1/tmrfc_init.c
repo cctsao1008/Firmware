@@ -36,12 +36,16 @@
 #include <nuttx/sdio.h>
 #include <nuttx/mmcsd.h>
 #include <nuttx/analog/adc.h>
-#include <stm32.h>
+
+#include "stm32.h"
 #include "board_config.h"
-#include <stm32_uart.h>
+#include "stm32_uart.h"
+
 #include <arch/board/board.h>
+
 #include <drivers/drv_hrt.h>
 #include <drivers/drv_led.h>
+
 #include <systemlib/cpuload.h>
 
 #include <termios.h>
@@ -132,7 +136,7 @@ __EXPORT void stm32_boardinitialize(void)
     stm32_usbinitialize();
 
     /* configure LEDs (empty call to NuttX' ledinit) */
-    up_ledinit();
+    //up_ledinit();
 }
 
 /****************************************************************************

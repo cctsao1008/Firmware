@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (C) 2012 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2012-2014 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -396,6 +396,27 @@ protected:
 	 */
 	virtual int	close_last(struct file *filp);
 
+        /**
+	 * Register a class device name, automatically adding device
+	 * class instance suffix if need be.
+	 *
+	 * @param class_devname   Device class name
+	 * @return class_instamce Class instance created, or -errno on failure
+	 */
+	virtual int register_class_devname(const char *class_devname);
+
+        /**
+	 * Register a class device name, automatically adding device
+	 * class instance suffix if need be.
+	 *
+	 * @param class_devname   Device class name
+	 * @param class_instance  Device class instance from register_class_devname()
+	 * @return		  OK on success, -errno otherwise
+	 */
+	virtual int unregister_class_devname(const char *class_devname, unsigned class_instance);
+
+	bool		_pub_blocked;		/**< true if publishing should be blocked */
+
 private:
 	static const unsigned _max_pollwaiters = 8;
 
@@ -487,5 +508,8 @@ private:
 };
 
 } // namespace device
+
+// class instance for primary driver of each class
+#define CLASS_DEVICE_PRIMARY 0
 
 #endif /* _DEVICE_DEVICE_H */

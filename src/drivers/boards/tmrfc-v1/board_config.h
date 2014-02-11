@@ -36,6 +36,8 @@ __BEGIN_DECLS
  * Definitions
  ****************************************************************************************************/
 /* Configuration ************************************************************************************/
+
+#define UDID_START		0x1FFF7A10
 #if defined(CONFIG_STM32_CAN1)
 #  warning "CAN1 is not supported on this board"
 #endif

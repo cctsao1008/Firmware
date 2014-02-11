@@ -8,6 +8,7 @@
 #
 #set MODE autostart
 echo "[init] MODE ="$MODE
+set logfile /fs/microsd/bootlog.txt
 
 #
 # Try to mount the microSD card.
@@ -48,10 +49,10 @@ then
 	#
 	# Start terminal
 	#
-	#if sercon
-	#then
-	#	echo "USB connected"
-	#fi
+	if sercon
+	then
+		echo "USB connected"
+	fi
 	
 	#
 	# Start the ORB (first app to start)

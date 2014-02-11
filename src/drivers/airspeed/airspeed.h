@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (C) 2013 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2013, 2014 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -123,13 +123,15 @@ protected:
 	virtual int	collect() = 0;
 
 	work_s			_work;
-	float		_max_differential_pressure_pa;
+	float			_max_differential_pressure_pa;
 	bool			_sensor_ok;
 	int			_measure_ticks;
 	bool			_collect_phase;
 	float			_diff_pres_offset;
 
 	orb_advert_t		_airspeed_pub;
+
+	int			_class_instance;
 
 	unsigned		_conversion_interval;
 
