@@ -1,6 +1,6 @@
 #!nsh
 #
-# HIL Quadcopter +
+# HIL Quadcopter X
 #
 # Maintainers: Anton Babushkin <anton.babushkin@me.com>
 #
@@ -43,4 +43,4 @@ fi
 set HIL yes
 
 set VEHICLE_TYPE mc
-set MIXER FMU_quad_+
+set MIXER FMU_quad_x

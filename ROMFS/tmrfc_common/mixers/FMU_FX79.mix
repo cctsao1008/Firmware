@@ -1,5 +1,9 @@
-Delta-wing mixer for PX4FMU
-===========================
+FX-79 Delta-wing mixer for PX4FMU
+=================================
+
+Designed for FX-79.
+
+TODO (sjwilks): Add mixers for flaps.
 
 This file defines mixers suitable for controlling a delta wing aircraft using
 PX4FMU. The configuration assumes the elevon servos are connected to PX4FMU
@@ -23,13 +27,13 @@ for the elevons.
 
 M: 2
 O:      10000  10000      0 -10000  10000
-S: 0 0  -8000  -8000      0 -10000  10000
-S: 0 1   6000   6000      0 -10000  10000
+S: 0 0   5000   8000      0 -10000  10000
+S: 0 1   8000   8000      0 -10000  10000
 
 M: 2
 O:      10000  10000      0 -10000  10000
-S: 0 0  -8000  -8000      0 -10000  10000
-S: 0 1  -6000  -6000      0 -10000  10000
+S: 0 0   8000   5000      0 -10000  10000
+S: 0 1  -8000  -8000      0 -10000  10000
 
 Output 2
 --------

@@ -1557,7 +1557,6 @@ Sensors::task_main()
 	_battery_status.discharged_mah = -1.0f;
 
 	/* get a set of initial values */
-    /* get a set of initial values */
     accel_poll(raw);
     gyro_poll(raw);
     mag_poll(raw);

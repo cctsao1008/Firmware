@@ -74,44 +74,45 @@
 #include <drivers/drv_gyro.h>
 #include <mathlib/math/filter/LowPassFilter2p.hpp>
 
-#include "mpu6050.h"
+#define MPU6050_ADDRESS             TMR_I2C_OBDEV_MPU6050
 
-#define MPU6050_ADDRESS        TMR_I2C_OBDEV_MPU6050
+#define MPU_DEVICE_PATH_ACCEL		"/dev/mpu6050_accel"
+#define MPU_DEVICE_PATH_GYRO		"/dev/mpu6050_gyro"
 
 // MPU 6050 registers
-#define MPUREG_WHOAMI           0x75
-#define MPUREG_SMPLRT_DIV       0x19
-#define MPUREG_CONFIG           0x1A
-#define MPUREG_GYRO_CONFIG      0x1B
-#define MPUREG_ACCEL_CONFIG     0x1C
-#define MPUREG_FIFO_EN          0x23
-#define MPUREG_INT_PIN_CFG      0x37
-#define MPUREG_INT_ENABLE       0x38
-#define MPUREG_INT_STATUS       0x3A
-#define MPUREG_ACCEL_XOUT_H     0x3B
-#define MPUREG_ACCEL_XOUT_L     0x3C
-#define MPUREG_ACCEL_YOUT_H     0x3D
-#define MPUREG_ACCEL_YOUT_L     0x3E
-#define MPUREG_ACCEL_ZOUT_H     0x3F
-#define MPUREG_ACCEL_ZOUT_L     0x40
-#define MPUREG_TEMP_OUT_H       0x41
-#define MPUREG_TEMP_OUT_L       0x42
-#define MPUREG_GYRO_XOUT_H      0x43
-#define MPUREG_GYRO_XOUT_L      0x44
-#define MPUREG_GYRO_YOUT_H      0x45
-#define MPUREG_GYRO_YOUT_L      0x46
-#define MPUREG_GYRO_ZOUT_H      0x47
-#define MPUREG_GYRO_ZOUT_L      0x48
-#define MPUREG_USER_CTRL        0x6A
-#define MPUREG_PWR_MGMT_1       0x6B
-#define MPUREG_PWR_MGMT_2       0x6C
-#define MPUREG_FIFO_COUNTH      0x72
-#define MPUREG_FIFO_COUNTL      0x73
-#define MPUREG_FIFO_R_W         0x74
-#define MPUREG_WHO_AM_I         0x75
-#define MPUREG_PRODUCT_ID       0x0C
+#define MPUREG_WHOAMI               0x75
+#define MPUREG_SMPLRT_DIV           0x19
+#define MPUREG_CONFIG               0x1A
+#define MPUREG_GYRO_CONFIG          0x1B
+#define MPUREG_ACCEL_CONFIG         0x1C
+#define MPUREG_FIFO_EN              0x23
+#define MPUREG_INT_PIN_CFG          0x37
+#define MPUREG_INT_ENABLE           0x38
+#define MPUREG_INT_STATUS           0x3A
+#define MPUREG_ACCEL_XOUT_H         0x3B
+#define MPUREG_ACCEL_XOUT_L         0x3C
+#define MPUREG_ACCEL_YOUT_H         0x3D
+#define MPUREG_ACCEL_YOUT_L         0x3E
+#define MPUREG_ACCEL_ZOUT_H         0x3F
+#define MPUREG_ACCEL_ZOUT_L         0x40
+#define MPUREG_TEMP_OUT_H           0x41
+#define MPUREG_TEMP_OUT_L           0x42
+#define MPUREG_GYRO_XOUT_H          0x43
+#define MPUREG_GYRO_XOUT_L          0x44
+#define MPUREG_GYRO_YOUT_H          0x45
+#define MPUREG_GYRO_YOUT_L          0x46
+#define MPUREG_GYRO_ZOUT_H          0x47
+#define MPUREG_GYRO_ZOUT_L          0x48
+#define MPUREG_USER_CTRL            0x6A
+#define MPUREG_PWR_MGMT_1           0x6B
+#define MPUREG_PWR_MGMT_2           0x6C
+#define MPUREG_FIFO_COUNTH          0x72
+#define MPUREG_FIFO_COUNTL          0x73
+#define MPUREG_FIFO_R_W             0x74
+#define MPUREG_WHO_AM_I             0x75
+#define MPUREG_PRODUCT_ID           0x0C
 
-// Configuration bits MPU 3000 and MPU 6000 (not revised)?
+// Configuration bits MPU 3000, MPU6000 and MPU 6050 (not revised)?
 #define BIT_SLEEP                   0x40
 #define BIT_H_RESET                 0x80
 #define BITS_CLKSEL                 0x07
@@ -136,24 +137,26 @@
 #define BIT_RAW_RDY_EN              0x01
 #define BIT_I2C_IF_DIS              0x10
 #define BIT_INT_STATUS_DATA         0x01
+#define BIT_I2C_BYPASS_EN           0x02
 
-// Product ID Description for MPU6000
+
+
+// Product ID Description for MPU6050
 // high 4 bits  low 4 bits
 // Product Name Product Revision
-#define MPU6000ES_REV_C4        0x14
-#define MPU6000ES_REV_C5        0x15
-#define MPU6000ES_REV_D6        0x16
-#define MPU6000ES_REV_D7        0x17
-#define MPU6000ES_REV_D8        0x18
-#define MPU6000_REV_C4          0x54
-#define MPU6000_REV_C5          0x55
-#define MPU6000_REV_D6          0x56
-#define MPU6000_REV_D7          0x57
-#define MPU6000_REV_D8          0x58
-#define MPU6000_REV_D9          0x59
-#define MPU6000_REV_D10         0x5A
-
-#define MPU6050_WHO_AM_I        0x68
+#define MPU6050ES_REV_C4            0x14
+#define MPU6050ES_REV_C5            0x15
+#define MPU6050ES_REV_D6            0x16
+#define MPU6050ES_REV_D7            0x17
+#define MPU6050ES_REV_D8            0x18
+#define MPU6050_REV_C4              0x54
+#define MPU6050_REV_C5              0x55
+#define MPU6050_REV_D6              0x56
+#define MPU6050_REV_D7              0x57
+#define MPU6050_REV_D8              0x58
+#define MPU6050_REV_D9              0x59
+#define MPU6050_REV_D10             0x5A
+#define MPU6050_WHO_AM_I            0x68
 
 #define MPU6050_ACCEL_DEFAULT_RANGE_G                8
 #define MPU6050_ACCEL_DEFAULT_RATE                1000
@@ -207,17 +210,19 @@ private:
     float           _accel_range_scale;
     float           _accel_range_m_s2;
     orb_advert_t        _accel_topic;
+	int			_accel_class_instance;
 
 	RingBuffer		*_gyro_reports;
 
     struct gyro_scale   _gyro_scale;
     float           _gyro_range_scale;
     float           _gyro_range_rad_s;
-    orb_advert_t        _gyro_topic;
 
-    unsigned        _reads;
     unsigned        _sample_rate;
+	perf_counter_t		_accel_reads;
+	perf_counter_t		_gyro_reads;
     perf_counter_t      _sample_perf;
+	perf_counter_t		_bad_transfers;
 
     math::LowPassFilter2p   _accel_filter_x;
     math::LowPassFilter2p   _accel_filter_y;
@@ -259,7 +264,7 @@ private:
      */
     void            measure();
 
-    /**
+    /***
      * Perform a poll cycle; collect from the previous measurement
      * and start a new one.
      *
@@ -274,7 +279,7 @@ private:
      */
     void            cycle();
 
-    /**
+    /***
      * Static trampoline from the workq context; because we don't have a
      * generic workq wrapper yet.
      *
@@ -282,7 +287,7 @@ private:
      */
     static void     cycle_trampoline(void *arg);
 
-    /**
+    /***
      * Collect the result of the most recent measurement.
      */
     int             collect();
@@ -294,6 +299,7 @@ private:
      * @return      The value that was read.
      */
     uint8_t         read_reg(uint8_t reg);
+	uint16_t		read_reg16(uint8_t reg);
 
     /**
      * Write a register in the MPU6050
@@ -370,21 +376,27 @@ public:
     ~MPU6050_gyro();
 
     virtual ssize_t     read(struct file *filp, char *buffer, size_t buflen);
-    virtual int     ioctl(struct file *filp, int cmd, unsigned long arg);
+	virtual int		ioctl(struct file *filp, int cmd, unsigned long arg);
+
+	virtual int		init();
 
 protected:
     friend class MPU6050;
 
     void            parent_poll_notify();
+
 private:
     MPU6050         *_parent;
+	orb_advert_t		_gyro_topic;
+	int			_gyro_class_instance;
+
 };
 
 /** driver 'main' command */
 extern "C" { __EXPORT int mpu6050_main(int argc, char *argv[]); }
 
 MPU6050::MPU6050(int bus) :
-    I2C("MPU6050", ACCEL_DEVICE_PATH, bus, MPU6050_ADDRESS, 400000),
+    I2C("MPU6050", MPU_DEVICE_PATH_ACCEL, bus, MPU6050_ADDRESS, 400000),
     _gyro(new MPU6050_gyro(this)),
     _product(0),
     _call_interval(0),
@@ -392,13 +404,15 @@ MPU6050::MPU6050(int bus) :
     _accel_range_scale(0.0f),
     _accel_range_m_s2(0.0f),
     _accel_topic(-1),
+	_accel_class_instance(-1),
     _gyro_reports(nullptr),
     _gyro_range_scale(0.0f),
     _gyro_range_rad_s(0.0f),
-    _gyro_topic(-1),
-    _reads(0),
     _sample_rate(1000),//MPU6050_GYRO_DEFAULT_RATE
+	_accel_reads(perf_alloc(PC_COUNT, "mpu6050_accel_read")),
+	_gyro_reads(perf_alloc(PC_COUNT, "mpu6050_gyro_read")),
     _sample_perf(perf_alloc(PC_ELAPSED, "mpu6050_read")),
+	_bad_transfers(perf_alloc(PC_COUNT, "mpu6050_bad_transfers")),
     _accel_filter_x(MPU6050_ACCEL_DEFAULT_RATE, MPU6050_ACCEL_DEFAULT_DRIVER_FILTER_FREQ),
     _accel_filter_y(MPU6050_ACCEL_DEFAULT_RATE, MPU6050_ACCEL_DEFAULT_DRIVER_FILTER_FREQ),
     _accel_filter_z(MPU6050_ACCEL_DEFAULT_RATE, MPU6050_ACCEL_DEFAULT_DRIVER_FILTER_FREQ),
@@ -443,15 +457,20 @@ MPU6050::~MPU6050()
     if (_gyro_reports != nullptr)
         delete _gyro_reports;
 
+	if (_accel_class_instance != -1)
+		unregister_class_devname(ACCEL_DEVICE_PATH, _accel_class_instance);
+
     /* delete the perf counter */
-    perf_free(_sample_perf);
+	perf_free(_sample_perf);
+	perf_free(_accel_reads);
+	perf_free(_gyro_reads);
+	perf_free(_bad_transfers);
 }
 
 int
 MPU6050::init()
 {
     int ret;
-    int gyro_ret;
 
     /* do I2C init (and probe) first */
     ret = I2C::init();
@@ -489,24 +508,43 @@ MPU6050::init()
     _gyro_scale.z_scale  = 1.0f;
 
     /* do CDev init for the gyro device node, keep it optional */
-    gyro_ret = _gyro->init();
+	ret = _gyro->init();
+	/* if probe/setup failed, bail now */
+	if (ret != OK) {
+		debug("gyro init failed");
+		return ret;
+	}
 
-    /* fetch an initial set of measurements for advertisement */
+	_accel_class_instance = register_class_devname(ACCEL_DEVICE_PATH);
+
     measure();
 
-    if (gyro_ret != OK) {
-        _gyro_topic = -1;
-    } else {
-        gyro_report gr;
-		_gyro_reports->get(&gr);
+	if (_accel_class_instance == CLASS_DEVICE_PRIMARY) {
 
-        _gyro_topic = orb_advertise(ORB_ID(sensor_gyro), &gr);
-    }
+		/* advertise sensor topic, measure manually to initialize valid report */
+		struct accel_report arp;
+		_accel_reports->get(&arp);
 
-    /* advertise accel topic */
-    accel_report ar;
-	_accel_reports->get(&ar);
-    _accel_topic = orb_advertise(ORB_ID(sensor_accel), &ar);
+		/* measurement will have generated a report, publish */
+		_accel_topic = orb_advertise(ORB_ID(sensor_accel), &arp);
+
+		if (_accel_topic < 0)
+			debug("failed to create sensor_accel publication");
+
+	}
+
+	if (_gyro->_gyro_class_instance == CLASS_DEVICE_PRIMARY) {
+
+		/* advertise sensor topic, measure manually to initialize valid report */
+		struct gyro_report grp;
+		_gyro_reports->get(&grp);
+
+		_gyro->_gyro_topic = orb_advertise(ORB_ID(sensor_gyro), &grp);
+
+		if (_gyro->_gyro_topic < 0)
+			debug("failed to create sensor_gyro publication");
+
+	}
 
 out:
     return ret;
@@ -514,12 +552,19 @@ out:
 
 void MPU6050::reset()
 {
+	// if the mpu6050 is initialised after the l3gd20 and lsm303d
+	// then if we don't do an irqsave/irqrestore here the mpu6050
+	// frequenctly comes up in a bad state where all transfers
+	// come as zero
+	irqstate_t state;
+	state = irqsave();
 
-    // Chip reset
     write_reg(MPUREG_PWR_MGMT_1, BIT_H_RESET);
     up_udelay(10000);
 
-    // Wake up device and select GyroZ clock (better performance)
+	// Wake up device and select GyroZ clock. Note that the
+	// MPU6050 starts up in sleep mode, and it can take some time
+	// for it to come out of sleep
     write_reg(MPUREG_PWR_MGMT_1, MPU_CLK_SEL_PLLGYROZ);
     up_udelay(1000);
 
@@ -546,23 +591,23 @@ void MPU6050::reset()
 
     // product-specific scaling
     switch (_product) {
-    case MPU6000ES_REV_C4:
-    case MPU6000ES_REV_C5:
-    case MPU6000_REV_C4:
-    case MPU6000_REV_C5:
+    case MPU6050ES_REV_C4:
+    case MPU6050ES_REV_C5:
+    case MPU6050_REV_C4:
+    case MPU6050_REV_C5:
         // Accel scale 8g (4096 LSB/g)
         // Rev C has different scaling than rev D
         write_reg(MPUREG_ACCEL_CONFIG, 1 << 3);
         break;
 
-    case MPU6000ES_REV_D6:
-    case MPU6000ES_REV_D7:
-    case MPU6000ES_REV_D8:
-    case MPU6000_REV_D6:
-    case MPU6000_REV_D7:
-    case MPU6000_REV_D8:
-    case MPU6000_REV_D9:
-    case MPU6000_REV_D10:
+    case MPU6050ES_REV_D6:
+    case MPU6050ES_REV_D7:
+    case MPU6050ES_REV_D8:
+    case MPU6050_REV_D6:
+    case MPU6050_REV_D7:
+    case MPU6050_REV_D8:
+    case MPU6050_REV_D9:
+    case MPU6050_REV_D10:
     // default case to cope with new chip revisions, which
     // presumably won't have the accel scaling bug      
     default:
@@ -581,7 +626,7 @@ void MPU6050::reset()
     // INT CFG => Interrupt on Data Ready
     write_reg(MPUREG_INT_ENABLE, BIT_RAW_RDY_EN);        // INT: Raw data ready
     usleep(1000);
-    write_reg(MPUREG_INT_PIN_CFG, BIT_INT_ANYRD_2CLEAR | (1 << MPU6050_INTCFG_I2C_BYPASS_EN_BIT)); // INT: Clear on any read
+    write_reg(MPUREG_INT_PIN_CFG, BIT_INT_ANYRD_2CLEAR | BIT_I2C_BYPASS_EN); // INT: Clear on any read
     usleep(1000);
 
     // Oscillator set
@@ -669,7 +714,9 @@ MPU6050::read(struct file *filp, char *buffer, size_t buflen)
     if (_accel_reports->empty())
         return -EAGAIN;
 
-    /* copy reports out of our buffer to the caller */
+	perf_count(_accel_reads);
+
+	/* copy reports out of our buffer to the caller */
     accel_report *arp = reinterpret_cast<accel_report *>(buffer);
     int transferred = 0;
     while (count--) {
@@ -686,12 +733,12 @@ MPU6050::read(struct file *filp, char *buffer, size_t buflen)
 int
 MPU6050::self_test()
 {
-    if (_reads == 0) {
+	if (perf_event_count(_sample_perf) == 0) {
         measure();
     }
 
-    /* return 0 on success, 1 else */
-    return (_reads > 0) ? 0 : 1;
+	/* return 0 on success, 1 else */
+	return (perf_event_count(_sample_perf) > 0) ? 0 : 1;
 }
 
 int
@@ -760,10 +807,12 @@ MPU6050::gyro_read(struct file *filp, char *buffer, size_t buflen)
     }
 
     /* if no data, error (we could block here) */
-    if (_gyro_reports->empty())
-        return -EAGAIN;
+	if (_gyro_reports->empty())
+		return -EAGAIN;
 
-    /* copy reports out of our buffer to the caller */
+	perf_count(_gyro_reads);
+
+	/* copy reports out of our buffer to the caller */
 	gyro_report *grp = reinterpret_cast<gyro_report *>(buffer);
     int transferred = 0;
     while (count--) {
@@ -1010,6 +1059,12 @@ MPU6050::read_reg(uint8_t reg)
     return val;
 }
 
+uint16_t
+MPU6050::read_reg16(uint8_t reg)
+{
+	return 0;
+}
+
 void
 MPU6050::write_reg(uint8_t reg, uint8_t value)
 {
@@ -1150,27 +1205,10 @@ MPU6050::measure()
     if (OK != transfer((uint8_t *)&mpu_report, 1, ((uint8_t *)&(mpu_report.status)), (sizeof(mpu_report) - 1 )))
         return;
 
-    /* count measurement */
-    _reads++;
-#if 0
-    /*
+	/*
      * Convert from big to little endian
      */
-    report.accel_x = int16_t_from_bytes(mpu_report.accel_y);
-    report.accel_y = int16_t_from_bytes(mpu_report.accel_x);
-    //report.accel_z = (-1) * (int16_t_from_bytes(mpu_report.accel_z));
-    report.accel_z = ~(int16_t_from_bytes(mpu_report.accel_z)) + 1;
 
-    report.temp = int16_t_from_bytes(mpu_report.temp);
-
-    report.gyro_x = int16_t_from_bytes(mpu_report.gyro_y);
-    report.gyro_y = int16_t_from_bytes(mpu_report.gyro_x);
-    //report.gyro_z = (-1) * (int16_t_from_bytes(mpu_report.gyro_z));
-    report.gyro_z = ~(int16_t_from_bytes(mpu_report.gyro_z)) + 1;
-#else
-    /*
-     * Convert from big to little endian
-     */
     report.accel_x = int16_t_from_bytes(mpu_report.accel_x);
     report.accel_y = int16_t_from_bytes(mpu_report.accel_y);
     report.accel_z = int16_t_from_bytes(mpu_report.accel_z);
@@ -1181,8 +1219,22 @@ MPU6050::measure()
     report.gyro_y = int16_t_from_bytes(mpu_report.gyro_y);
     report.gyro_z = int16_t_from_bytes(mpu_report.gyro_z);
 
-    /*
-     * Swap x,y axe and negate x,z
+	if (report.accel_x == 0 &&
+	    report.accel_y == 0 &&
+	    report.accel_z == 0 &&
+	    report.temp == 0 &&
+	    report.gyro_x == 0 &&
+	    report.gyro_y == 0 &&
+	    report.gyro_z == 0) {
+		// all zero data - probably a SPI bus error
+		perf_count(_bad_transfers);
+		perf_end(_sample_perf);
+		return;
+	}
+	    
+
+	/*
+	 * Swap axes and negate y
      */
     int16_t accel_xt = report.accel_y;
     int16_t accel_yt = report.accel_x;
@@ -1202,35 +1254,9 @@ MPU6050::measure()
     report.gyro_x = gyro_xt;
     report.gyro_y = gyro_yt;
     report.gyro_z = gyro_zt;
-	
-#endif
 
-#if 0
-    /*
-     * Swap x,y axe and negate x,z
-     */
-    //int16_t accel_xt = report.accel_y;
-    //int16_t accel_yt = ((report.accel_x == -32768) ? 32767 : -report.accel_x);
-    int16_t accel_zt = ((report.accel_z == -32768) ? 32767 : -report.accel_z);
-
-    //int16_t gyro_xt = report.gyro_y;
-    //int16_t gyro_yt = ((report.gyro_x == -32768) ? 32767 : -report.gyro_x);
-    int16_t gyro_zt = ((report.gyro_z == -32768) ? 32767 : -report.gyro_z);
-
-    /*
-     * Apply the swap
-     */
-    //report.accel_x = accel_xt;
-    //report.accel_y = accel_yt;
-    report.accel_z = accel_zt;
-
-    //report.gyro_x = gyro_xt;
-    //report.gyro_y = gyro_yt;
-    report.gyro_z = gyro_zt;
-#endif
-
-    /*
-     * Report buffers.
+	/*
+	 * Report buffers.
      */
     accel_report        arb;
     gyro_report         grb;
@@ -1302,14 +1328,79 @@ MPU6050::measure()
     poll_notify(POLLIN);
     _gyro->parent_poll_notify();
 
-    /* and publish for subscribers */
-    orb_publish(ORB_ID(sensor_accel), _accel_topic, &arb);
-    if (_gyro_topic != -1) {
-        orb_publish(ORB_ID(sensor_gyro), _gyro_topic, &grb);
+	if (_accel_topic > 0 && !(_pub_blocked)) {
+		/* publish it */
+		orb_publish(ORB_ID(sensor_accel), _accel_topic, &arb);
+	}
+
+	if (_gyro->_gyro_topic > 0 && !(_pub_blocked)) {
+		/* publish it */
+		orb_publish(ORB_ID(sensor_gyro), _gyro->_gyro_topic, &grb);
     }
 
     /* stop measuring */
     perf_end(_sample_perf);
+}
+
+void
+MPU6050::print_info()
+{
+	perf_print_counter(_sample_perf);
+	perf_print_counter(_accel_reads);
+	perf_print_counter(_gyro_reads);
+	_accel_reports->print_info("accel queue");
+	_gyro_reports->print_info("gyro queue");
+}
+
+MPU6050_gyro::MPU6050_gyro(MPU6050 *parent) :
+    CDev("MPU6050_gyro", MPU_DEVICE_PATH_GYRO),
+	_parent(parent),
+	_gyro_class_instance(-1)
+{
+}
+
+MPU6050_gyro::~MPU6050_gyro()
+{
+	if (_gyro_class_instance != -1)
+		unregister_class_devname(GYRO_DEVICE_PATH, _gyro_class_instance);
+}
+
+int
+MPU6050_gyro::init()
+{
+	int ret;
+
+	// do base class init
+	ret = CDev::init();
+
+	/* if probe/setup failed, bail now */
+	if (ret != OK) {
+		debug("gyro init failed");
+		return ret;
+	}
+
+	_gyro_class_instance = register_class_devname(GYRO_DEVICE_PATH);
+
+out:
+	return ret;
+}
+
+void
+MPU6050_gyro::parent_poll_notify()
+{
+    poll_notify(POLLIN);
+}
+
+ssize_t
+MPU6050_gyro::read(struct file *filp, char *buffer, size_t buflen)
+{
+    return _parent->gyro_read(filp, buffer, buflen);
+}
+
+int
+MPU6050_gyro::ioctl(struct file *filp, int cmd, unsigned long arg)
+{
+    return _parent->gyro_ioctl(filp, cmd, arg);
 }
 
 void
@@ -1347,40 +1438,6 @@ MPU6050::collect()
     return ret;
 }
 
-void
-MPU6050::print_info()
-{
-    printf("reads:          %u\n", _reads);
-}
-
-MPU6050_gyro::MPU6050_gyro(MPU6050 *parent) :
-    CDev("MPU6050_gyro", GYRO_DEVICE_PATH),
-    _parent(parent)
-{
-}
-
-MPU6050_gyro::~MPU6050_gyro()
-{
-}
-
-void
-MPU6050_gyro::parent_poll_notify()
-{
-    poll_notify(POLLIN);
-}
-
-ssize_t
-MPU6050_gyro::read(struct file *filp, char *buffer, size_t buflen)
-{
-    return _parent->gyro_read(filp, buffer, buflen);
-}
-
-int
-MPU6050_gyro::ioctl(struct file *filp, int cmd, unsigned long arg)
-{
-    return _parent->gyro_ioctl(filp, cmd, arg);
-}
-
 /**
  * Local functions in support of the shell command.
  */
@@ -1406,35 +1463,27 @@ start()
         /* if already started, the still command succeeded */
         errx(0, "already started");
 
-    /* create the driver, attempt expansion bus first */
+    /* create the driver */
     g_dev = new MPU6050(TMR_I2C_BUS_ONBOARD);
 
-    if (g_dev != nullptr && OK != g_dev->init()) {
-        delete g_dev;
-        g_dev = nullptr;
-    }
+    if (g_dev == nullptr)
+		goto fail;
 
-    #if defined(TMR_I2C_BUS_ONBOARD)
-    /* if this failed, attempt onboard sensor */
-    if (g_dev == nullptr) {
-        g_dev = new MPU6050(TMR_I2C_BUS_ONBOARD);
+	if (OK != g_dev->init())
+		goto fail;
 
-        if (g_dev != nullptr && OK != g_dev->init()) {
-            goto fail;
-        }
-    }
-    #endif
-
-    /* set the poll rate to default, starts automatic data collection */
-    fd = open(ACCEL_DEVICE_PATH, O_RDONLY);
+	/* set the poll rate to default, starts automatic data collection */
+    fd = open(MPU_DEVICE_PATH_ACCEL, O_RDONLY);
 
     if (fd < 0)
         goto fail;
 
     if (ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT) < 0)
-        goto fail;
+		goto fail;
 
-    exit(0);
+        close(fd);
+
+	exit(0);
 fail:
 
     if (g_dev != nullptr) {
@@ -1458,17 +1507,17 @@ test()
     ssize_t sz;
 
     /* get the driver */
-    int fd = open(ACCEL_DEVICE_PATH, O_RDONLY);
+    int fd = open(MPU_DEVICE_PATH_ACCEL, O_RDONLY);
 
     if (fd < 0)
         err(1, "%s open failed (try 'mpu6050 start' if the driver is not running)",
-            ACCEL_DEVICE_PATH);
+            MPU_DEVICE_PATH_ACCEL);
 
     /* get the driver */
-    int fd_gyro = open(GYRO_DEVICE_PATH, O_RDONLY);
+    int fd_gyro = open(MPU_DEVICE_PATH_GYRO, O_RDONLY);
 
     if (fd_gyro < 0)
-        err(1, "%s open failed", GYRO_DEVICE_PATH);
+        err(1, "%s open failed", MPU_DEVICE_PATH_GYRO);
 
     /* reset to manual polling */
     if (ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_MANUAL) < 0)
@@ -1516,9 +1565,6 @@ test()
 
     /* XXX add poll-rate tests here too */
 
-    if (ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT) < 0)
-        err(1, "reset to manual polling");
-
     //reset();
     errx(0, "PASS");
 }
@@ -1529,7 +1575,7 @@ test()
 void
 reset()
 {
-    int fd = open(ACCEL_DEVICE_PATH, O_RDONLY);
+    int fd = open(MPU_DEVICE_PATH_ACCEL, O_RDONLY);
 
     if (fd < 0)
         err(1, "failed ");
@@ -1537,8 +1583,10 @@ reset()
     if (ioctl(fd, SENSORIOCRESET, 0) < 0)
         err(1, "driver reset failed");
 
-    if (ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT) < 0)
-        err(1, "driver poll restart failed");
+	if (ioctl(fd, SENSORIOCSPOLLRATE, SENSOR_POLLRATE_DEFAULT) < 0)
+		err(1, "driver poll restart failed");
+
+        close(fd);
 
     exit(0);
 }

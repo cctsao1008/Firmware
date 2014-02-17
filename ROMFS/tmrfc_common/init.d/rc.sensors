@@ -9,25 +9,23 @@
 
 if adc start
 then
-	echo "[ADC] Ready."
+	echo "[init] Using Built-in ADC Converter"
 fi
 
 if mpu6050 start
 then
-	echo "[MPU6050] Ready."
-	set BOARD fcv1
-	
-	if hmc5883 start
-	then
-		echo "[HMC5883] Ready."
-	fi
+	echo "[init] Using MPU6050"
+fi
 
-	if ms5611 start
-	then
-		echo "[MS5611] Ready."
-	fi
-else
-	echo "Failed to start MPU6050"
+# Mag might be external
+if hmc5883 start
+then
+	echo "[init] Using HMC5883"
+fi
+
+if ms5611 start
+then
+	echo "[init] Using MS5611"
 fi
 
 #
