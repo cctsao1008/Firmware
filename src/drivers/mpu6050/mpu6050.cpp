@@ -74,8 +74,6 @@
 #include <drivers/drv_gyro.h>
 #include <mathlib/math/filter/LowPassFilter2p.hpp>
 
-#define MPU6050_ADDRESS             TMR_I2C_OBDEV_MPU6050
-
 #define MPU_DEVICE_PATH_ACCEL		"/dev/mpu6050_accel"
 #define MPU_DEVICE_PATH_GYRO		"/dev/mpu6050_gyro"
 
@@ -396,7 +394,7 @@ private:
 extern "C" { __EXPORT int mpu6050_main(int argc, char *argv[]); }
 
 MPU6050::MPU6050(int bus) :
-    I2C("MPU6050", MPU_DEVICE_PATH_ACCEL, bus, MPU6050_ADDRESS, 400000),
+    I2C("MPU6050", MPU_DEVICE_PATH_ACCEL, bus, TMR_I2C_OBDEV_MPU6050, 400000),
     _gyro(new MPU6050_gyro(this)),
     _product(0),
     _call_interval(0),
@@ -567,6 +565,8 @@ void MPU6050::reset()
 	// for it to come out of sleep
     write_reg(MPUREG_PWR_MGMT_1, MPU_CLK_SEL_PLLGYROZ);
     up_udelay(1000);
+
+    irqrestore(state);
 
     // SAMPLE RATE
     _set_sample_rate(_sample_rate); // default sample rate = 200Hz
@@ -1355,6 +1355,7 @@ MPU6050::print_info()
 MPU6050_gyro::MPU6050_gyro(MPU6050 *parent) :
     CDev("MPU6050_gyro", MPU_DEVICE_PATH_GYRO),
 	_parent(parent),
+	_gyro_topic(-1),
 	_gyro_class_instance(-1)
 {
 }
