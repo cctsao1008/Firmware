@@ -3,4 +3,4 @@
 #
 
 MODULE_COMMAND	 = mtd
-SRCS		 = mtd.c 24xxxx_mtd.c
+SRCS		 = mtd.c 24xxxx_mtd.c backup_sram.c

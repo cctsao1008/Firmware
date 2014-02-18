@@ -56,7 +56,7 @@ MODULES		+= modules/sensors
 #
 #MODULES	+= systemcmds/eeprom
 #MODULES	+= systemcmds/ramtron
-#MODULES	+= systemcmds/mtd
+MODULES		+= systemcmds/mtd
 MODULES		+= systemcmds/bl_update
 MODULES		+= systemcmds/boardinfo
 MODULES		+= systemcmds/i2c
@@ -89,7 +89,7 @@ MODULES		+= modules/attitude_estimator_ekf
 MODULES		+= modules/attitude_estimator_so3
 MODULES		+= modules/att_pos_estimator_ekf
 MODULES		+= modules/position_estimator_inav
-MODULES		+= examples/flow_position_estimator
+#MODULES	+= examples/flow_position_estimator
 
 #
 # Vehicle Control
@@ -98,8 +98,8 @@ MODULES		+= modules/fw_pos_control_l1
 MODULES		+= modules/fw_att_control
 MODULES		+= modules/multirotor_att_control
 MODULES		+= modules/multirotor_pos_control
-MODULES		+= examples/flow_position_control
-MODULES		+= examples/flow_speed_control
+#MODULES	+= examples/flow_position_control
+#MODULES	+= examples/flow_speed_control
 
 #
 # Logging

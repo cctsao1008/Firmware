@@ -51,8 +51,8 @@
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 
-#include <nuttx/spi.h>
-#include <nuttx/mtd.h>
+#include <nuttx/spi/spi.h>
+#include <nuttx/mtd/mtd.h>
 #include <nuttx/fs/nxffs.h>
 #include <nuttx/fs/ioctl.h>
 
@@ -61,6 +61,10 @@
 #include "systemlib/systemlib.h"
 #include "systemlib/param/param.h"
 #include "systemlib/err.h"
+
+#ifdef CONFIG_ARCH_BOARD_TMRFC_V1
+#include "backup_sram.h"
+#endif
 
 #include <board_config.h>
 
@@ -80,12 +84,16 @@ int mtd_main(int argc, char *argv[])
 static void	ramtron_attach(void);
 #else
 
+#ifndef CONFIG_ARCH_BOARD_TMRFC_V1
 #ifndef PX4_I2C_BUS_ONBOARD
 #  error PX4_I2C_BUS_ONBOARD not defined, cannot locate onboard EEPROM
 #endif
-
+#endif
 static void	at24xxx_attach(void);
 #endif
+
+static void	sram_attach(void);
+
 static void	mtd_start(char *partition_names[], unsigned n_partitions);
 static void	mtd_test(void);
 static void	mtd_erase(char *partition_names[], unsigned n_partitions);
@@ -200,7 +208,12 @@ static void
 at24xxx_attach(void)
 {
 	/* find the right I2C */
+    #ifdef CONFIG_ARCH_BOARD_TMRFC_V1
+    struct i2c_dev_s *i2c = up_i2cinitialize(TMR_I2C_BUS_ONBOARD);
+    #else
 	struct i2c_dev_s *i2c = up_i2cinitialize(PX4_I2C_BUS_ONBOARD);
+    #endif
+
 	/* this resets the I2C bus, set correct bus speed again */
 	I2C_SETFREQUENCY(i2c, 400000);
 
@@ -227,6 +240,28 @@ at24xxx_attach(void)
 }
 #endif
 
+#ifdef CONFIG_ARCH_BOARD_TMRFC_V1
+sram_attach(void)
+{
+    /* start the MTD driver, attempt 5 times */
+	for (int i = 0; i < 5; i++) {
+		mtd_dev = rammtd_initialize(BKPSRAM_BASE, (4 * 1024));
+		if (mtd_dev) {
+			/* abort on first valid result */
+			if (i > 0) {
+				warnx("warning: mtd needed %d attempts to attach", i+1);
+			}
+			break;
+		}
+	}
+
+	/* if last attempt is still unsuccessful, abort */
+	if (mtd_dev == NULL)
+		errx(1, "failed to initialize MTD driver");
+    attached = true;
+}
+#endif
+
 static void
 mtd_start(char *partition_names[], unsigned n_partitions)
 {
@@ -236,9 +271,11 @@ mtd_start(char *partition_names[], unsigned n_partitions)
 		errx(1, "mtd already mounted");
 
 	if (!attached) {
-		#ifdef CONFIG_ARCH_BOARD_PX4FMU_V1
+        #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+        sram_attach();
+		#elif defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
 		at24xxx_attach();
-		#else
+        #else
 		ramtron_attach();
 		#endif
 	}

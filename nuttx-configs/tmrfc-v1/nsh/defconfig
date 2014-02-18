@@ -454,7 +454,7 @@ CONFIG_WATCHDOG=y
 # CONFIG_BCH is not set
 # CONFIG_INPUT is not set
 # CONFIG_LCD is not set
-# CONFIG_MTD is not set
+CONFIG_MTD=y
 CONFIG_PIPES=y
 # CONFIG_PM is not set
 # CONFIG_POWER is not set
