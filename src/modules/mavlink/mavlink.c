@@ -519,7 +519,11 @@ int mavlink_thread_main(int argc, char *argv[])
 	mavlink_logbuffer_init(&lb, 10);
 
 	int ch;
+    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+    char *device_name = "/dev/ttyS2";
+    #else
 	char *device_name = "/dev/ttyS1";
+    #endif
 	baudrate = 57600;
 
 	/* work around some stupidity in task_create's argv handling */

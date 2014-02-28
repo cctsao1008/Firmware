@@ -364,7 +364,11 @@ get_mavlink_mode_and_state(const struct vehicle_control_mode_s *control_mode, co
 int mavlink_thread_main(int argc, char *argv[])
 {
 	int ch;
-	char *device_name = "/dev/ttyS1";
+    #if defined(CONFIG_ARCH_BOARD_TMRFC_V1)
+	char *device_name = "/dev/ttyS2";
+    #else
+    char *device_name = "/dev/ttyS1";
+    #endif
 	baudrate = 57600;
 
 	/* XXX this is never written? */
