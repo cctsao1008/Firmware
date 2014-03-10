@@ -40,117 +40,135 @@
  * CONFIG_ARCH_LEDS configuration switch.
  */
 __BEGIN_DECLS
-extern void led_init();
-extern void led_on(int led);
-extern void led_off(int led);
-extern void led_toggle(int led);
+ int led_init(void);
+ void led_on(uint16_t led);
+ void led_off(uint16_t led);
+ void led_toggle(uint16_t led);
 __END_DECLS
 
-int fd = NULL;
+int fd = -1;
 
-__EXPORT void led_init()
+__EXPORT int led_init(void)
 {
     /* Configure LED1-5 for output */
-    if (fd != NULL)
-        printf("[TMRFC_LED] led_init, already initialized \n");
-    else
+    if (fd > 0)
     {
-        fd = open(PCA953X_DEVICE_PATH, O_RDONLY);
-
-        if(fd != NULL)
-            printf("[TMRFC_LED] led_init, successfully \n");
-        else
-            printf("[TMRFC_LED] led_init, failed \n");
+        printf("[TMRFC_LED] led_init, already initialized \n");
+        return 1;
     }
+
+    fd = open(PCA953X_DEVICE_PATH, O_RDONLY);
+
+    if(fd > 0)
+    {
+        printf("[TMRFC_LED] led_init, successfully \n");
+        return 1;
+    }
+
+     printf("[TMRFC_LED] led_init, failed \n");
+
+     return -1;
     
 }
 
-__EXPORT void led_on(int led)
+__EXPORT void led_on(uint16_t led)
 {
     printf("[TMRFC_LED] led_on, led = 0x%X \n", led);
 
-    if (led == BOARD_LED1_BIT)
+    if(fd > 0)
     {
-        ioctl(fd, LED_ON, BOARD_LED1_BIT);
-    }
+        if (led == BOARD_LED1_BIT)
+        {
+            ioctl(fd, LED_ON, BOARD_LED1_BIT);
+        }
     
-    if (led == BOARD_LED2_BIT)
-    {
-        ioctl(fd, LED_ON, BOARD_LED2_BIT);
-    }
+        if (led == BOARD_LED2_BIT)
+        {
+            ioctl(fd, LED_ON, BOARD_LED2_BIT);
+        }
     
-    if (led == BOARD_LED3_BIT)
-    {
-        ioctl(fd, LED_ON, BOARD_LED3_BIT);
-    }
+        if (led == BOARD_LED3_BIT)
+        {
+            ioctl(fd, LED_ON, BOARD_LED3_BIT);
+        }
     
-    if (led == BOARD_LED4_BIT)
-    {
-        ioctl(fd, LED_ON, BOARD_LED4_BIT);
-    }
+        if (led == BOARD_LED4_BIT)
+        {
+            ioctl(fd, LED_ON, BOARD_LED4_BIT);
+        }
 
-    if (led == BOARD_LED5_BIT)
-    {
-        ioctl(fd, LED_ON, BOARD_LED5_BIT);
+        if (led == BOARD_LED5_BIT)
+        {
+            ioctl(fd, LED_ON, BOARD_LED5_BIT);
+        }
     }
 }
 
-__EXPORT void led_off(int led)
+__EXPORT void led_off(uint16_t led)
 {
     printf("[TMRFC_LED] led_off, led = 0x%X \n", led);
 
-    if (led == BOARD_LED1_BIT)
+    if(fd > 0)
     {
-        ioctl(fd, LED_OFF, BOARD_LED1_BIT);
-    }
+        if (led == BOARD_LED1_BIT)
+        {
+            ioctl(fd, LED_OFF, BOARD_LED1_BIT);
+        }
     
-    if (led == BOARD_LED2_BIT)
-    {
-        ioctl(fd, LED_OFF, BOARD_LED2_BIT);
-    }
+        if (led == BOARD_LED2_BIT)
+        {
+            ioctl(fd, LED_OFF, BOARD_LED2_BIT);
+        }
     
-    if (led == BOARD_LED3_BIT)
-    {
-        ioctl(fd, LED_OFF, BOARD_LED3_BIT);
-    }
+        if (led == BOARD_LED3_BIT)
+        {
+            ioctl(fd, LED_OFF, BOARD_LED3_BIT);
+        }
     
-    if (led == BOARD_LED4_BIT)
-    {
-        ioctl(fd, LED_OFF, BOARD_LED4_BIT);
+        if (led == BOARD_LED4_BIT)
+        {
+            ioctl(fd, LED_OFF, BOARD_LED4_BIT);
+        }
+
+        if (led == BOARD_LED5_BIT)
+        {
+            ioctl(fd, LED_OFF, BOARD_LED5_BIT);
+        }
     }
 
-    if (led == BOARD_LED5_BIT)
-    {
-        ioctl(fd, LED_OFF, BOARD_LED5_BIT);
-    }
 }
     
-__EXPORT void led_toggle(int led)
+__EXPORT void led_toggle(uint16_t led)
 {
     printf("[TMRFC_LED] led_toggle, led = 0x%X \n", led);
 
-    if (led == BOARD_LED1_BIT)
+    if(fd > 0)
     {
-        ioctl(fd, LED_TOGGLE, BOARD_LED1_BIT);
-    }
+        if (led == BOARD_LED1_BIT)
+        {
+            ioctl(fd, LED_TOGGLE, BOARD_LED1_BIT);
+        }
     
-    if (led == BOARD_LED2)
-    {
-        ioctl(fd, LED_TOGGLE, BOARD_LED2_BIT);
-    }
+        if (led == BOARD_LED2_BIT)
+        {
+            ioctl(fd, LED_TOGGLE, BOARD_LED2_BIT);
+        }
     
-    if (led == BOARD_LED3)
-    {
-        ioctl(fd, LED_TOGGLE, BOARD_LED3_BIT);
-    }
+        if (led == BOARD_LED3_BIT)
+        {
+            ioctl(fd, LED_TOGGLE, BOARD_LED3_BIT);
+        }
     
-    if (led == BOARD_LED4)
-    {
-        ioctl(fd, LED_TOGGLE, BOARD_LED4_BIT);
+        if (led == BOARD_LED4_BIT)
+        {
+            ioctl(fd, LED_TOGGLE, BOARD_LED4_BIT);
+        }
+
+        if (led == BOARD_LED5_BIT)
+        {
+            ioctl(fd, LED_TOGGLE, BOARD_LED5_BIT);
+        }
     }
 
-    if (led == BOARD_LED5)
-    {
-        ioctl(fd, LED_TOGGLE, BOARD_LED5_BIT);
-    }
 }
+
