@@ -66,6 +66,7 @@
 #include <systemlib/mixer/mixer.h>
 #include <systemlib/pwm_limit/pwm_limit.h>
 #include <systemlib/board_serial.h>
+#include <systemlib/sbus_decode.h>
 #include <drivers/drv_mixer.h>
 #include <drivers/drv_rc_input.h>
 
@@ -285,6 +286,12 @@ TMRFC::init()
         debug("task start failed: %d", errno);
         return -errno;
     }
+
+    #if 0
+    /* S.bus input (USART4) */
+    debug("sbus_init");
+	sbus_init("/dev/ttyS1");
+    #endif
 
     return OK;
 }
@@ -691,6 +698,42 @@ TMRFC::task_main()
 		}
 
 #endif
+
+        #if 0
+        //static perf_counter_t c_gather_sbus;
+
+    	//perf_begin(c_gather_sbus);
+
+    	//bool sbus_status = (r_status_flags & PX4IO_P_STATUS_FLAGS_RC_SBUS);
+
+        uint16_t values[20], num_values[20];
+        uint16_t rssi = 0;
+
+    	bool sbus_failsafe, sbus_frame_drop;
+    	bool sbus_updated = sbus_input(values, num_values, &sbus_failsafe, &sbus_frame_drop, SBUS_RC_INPUT_CHANNELS);
+
+        // see if we have new S.BUS input data
+    	if (sbus_updated) {
+            debug("sbus_updated");
+
+    	    rssi = 255;
+
+    	    if (sbus_frame_drop) {
+                debug("sbus_frame_drop");
+			    rssi = 100;
+    	    }
+
+		    if (sbus_failsafe) {
+                debug("sbus_failsafe");
+			    rssi = 0;
+    	    }
+
+            debug("sbus_input: %d, %d, %d, %d, %d", values[0], values[1], values[2], values[3], values[4]);
+            debug("sbus_input: %d, %d, %d, %d, %d", values[6], values[7], values[8], values[9], values[10]);
+    	}
+
+    	//perf_end(c_gather_sbus);
+        #endif
 
     }
 

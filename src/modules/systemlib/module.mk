@@ -54,3 +54,6 @@ SRCS		 = err.c \
 		   board_serial.c \
 		   pwm_limit/pwm_limit.c
 
+ifeq ($(CONFIG_BOARD),TMRFC_V1)
+SRCS		+= sbus_decode.c
+endif

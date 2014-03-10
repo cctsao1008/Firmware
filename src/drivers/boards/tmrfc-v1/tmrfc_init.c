@@ -88,10 +88,10 @@
 #define LOG_INFO  "INFOR"  
 #define LOG_CRIT  "CRTCL"  
  
-#define LOG(level, format, ...) \  
-    do { \  
-        printf("[%s] %s > %s,%d \n" format "\n", \  
-            level, __func__, __FILE__, __LINE__, ##__VA_ARGS__ ); \  
+#define LOG(level, format, ...) \
+    do { \
+        printf("[%s] %s > %s,%d \n" format "\n", \
+            level, __func__, __FILE__, __LINE__, ##__VA_ARGS__ ); \
     } while (0)
     
 #endif
@@ -104,9 +104,9 @@
  * CONFIG_ARCH_LEDS configuration switch.
  */
 __BEGIN_DECLS
-extern void led_init();
-extern void led_on(int led);
-extern void led_off(int led);
+extern int led_init(void);
+extern void led_on(uint16_t led);
+extern void led_off(uint16_t led);
 __END_DECLS
 
 /****************************************************************************
@@ -136,7 +136,7 @@ __EXPORT void stm32_boardinitialize(void)
     stm32_usbinitialize();
 
     /* configure LEDs (empty call to NuttX' ledinit) */
-    //up_ledinit();
+    board_led_initialize();
 }
 
 /****************************************************************************
@@ -150,9 +150,13 @@ __EXPORT void stm32_boardinitialize(void)
 static struct spi_dev_s *spi1;
 static struct spi_dev_s *spi2;
 #endif
+
+#if defined(CONFIG_SPI_BITBANG) && defined(CONFIG_MMCSD_SPI)  /* Use SPI to access Micro SD card  */
 static struct spi_dev_s *spi;
-static struct spi_dev_s *spi3;
+#else
 static struct sdio_dev_s *sdio;
+#endif
+static struct spi_dev_s *spi3;
 
 #include <math.h>
 
@@ -261,7 +265,7 @@ __EXPORT int nsh_archinitialize(void)
         CONFIG_NSH_MMCSDSLOTNO);
         
     #else  /* Use SDIO to access Micro SD card  */
-	#ifdef CONFIG_MMCSD
+
 	/* First, get an instance of the SDIO interface */
     
     /* Mount the SDIO-based MMC/SD block driver first and get an instance of the SDIO interface */
@@ -288,7 +292,7 @@ __EXPORT int nsh_archinitialize(void)
     sdio_mediachange(sdio, true);
 
 	message("[boot] Initialized SDIO\n");
-	#endif
+
     #endif
 
     /* Initializing SPI port 3 */
