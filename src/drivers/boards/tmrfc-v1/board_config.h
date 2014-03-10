@@ -201,7 +201,10 @@ __BEGIN_DECLS
 
 extern void stm32_spiinitialize(void);
 extern void stm32_usbinitialize(void);
+extern int nsh_archinitialize(void);
+extern int usbmsc_archinitialize(void);
 
 #endif /* __ASSEMBLY__ */
 
 __END_DECLS
+
